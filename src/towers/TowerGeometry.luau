@@ -32,6 +32,12 @@ export type Sign = {
 	face: string, -- "Front" or "Back"
 }
 
+export type Spin = {
+	id: string, -- parts with the same id turn together
+	role: string, -- "base" stays still, "hub" is the axle (turns about its own X axis), "part" is fixed to the hub
+	speed: number, -- radians per second
+}
+
 export type Prim = {
 	kind: string, -- "box", "wedge", "cyl" (round ends on its own X axis) or "ball"
 	name: string,
@@ -50,6 +56,7 @@ export type Prim = {
 	dayColor: RGB?, -- Room and Lamp parts: colour while the lights are off
 	light: Light?,
 	sign: Sign?,
+	spin: Spin?,
 }
 
 export type Tower = { -- one entry in TowerConfig
@@ -131,6 +138,7 @@ type Props = {
 	dayColor: RGB?,
 	light: Light?,
 	sign: Sign?,
+	spin: Spin?,
 }
 
 type Ctx = { prims: { Prim }, group: string }
@@ -154,6 +162,7 @@ local function add(ctx: Ctx, kind: string, name: string, size: Vec, pos: Vec, ro
 		dayColor = p.dayColor,
 		light = p.light,
 		sign = p.sign,
+		spin = p.spin,
 	})
 end
 
@@ -505,12 +514,28 @@ local function podium(ctx: Ctx, t: Tower, accent: RGB, rand: () -> number)
 		box(ctx, "Fascia", { TOP_W + 0.4, 2.4, 1 }, { 0, PODIUM_H - 1.4, z + out * 1.2 }, DARK_METAL)
 	end
 
-	-- Revolving door and side doors
-	local door = { 0, (LOBBY + DOOR_TOP) / 2, zf }
-	post(ctx, "RevolvingDoor", 4.2, DOOR_TOP - LOBBY, door, { color = { 200, 220, 230 }, material = "Glass", transparency = 0.7, solid = false })
-	post(ctx, "DoorDrum", 4.5, 0.8, { 0, DOOR_TOP + 0.3, zf }, DARK_METAL)
+	-- Revolving door: four glass wings turn slowly round the centre post
+	local doorY = (LOBBY + DOOR_TOP) / 2
+	local wingH = DOOR_TOP - LOBBY - 0.4
+	local door = { 0, doorY, zf }
+	local function turning(role: string): Spin
+		return { id = "RevolvingDoor", role = role, speed = 0.45 }
+	end
+	local wingGlass: Props = { color = { 200, 220, 230 }, material = "Glass", transparency = 0.5, solid = false, spin = turning("part") }
+	local wingMetal: Props = { color = MULLION.color, material = "Metal", solid = false, spin = turning("part") }
+	post(ctx, "DoorEnclosure", 4.2, DOOR_TOP - LOBBY, door, { color = { 200, 220, 230 }, material = "Glass", transparency = 0.75, solid = false })
+	post(ctx, "DoorDrum", 4.5, 0.8, { 0, DOOR_TOP + 0.3, zf }, { color = DARK_METAL.color, material = "Metal", spin = turning("base") })
+	post(ctx, "DoorPost", 0.35, wingH, door, { color = DARK_METAL.color, material = "Metal", solid = false, spin = turning("hub") })
 	for _, a in { 45, -45 } do
-		add(ctx, "box", "DoorWing", { 8.2, DOOR_TOP - LOBBY - 0.4, 0.12 }, door, rotY(a), { color = { 200, 220, 230 }, material = "Glass", transparency = 0.5, solid = false })
+		add(ctx, "box", "DoorWing", { 8.1, wingH, 0.12 }, door, rotY(a), wingGlass)
+		add(ctx, "box", "DoorPushBar", { 7.2, 0.18, 0.32 }, { 0, LOBBY + 4, zf }, rotY(a), wingMetal)
+		for _, y in { doorY - wingH / 2 + 0.15, doorY + wingH / 2 - 0.15 } do
+			add(ctx, "box", "DoorRail", { 8.1, 0.3, 0.26 }, { 0, y, zf }, rotY(a), wingMetal)
+		end
+	end
+	for k = 0, 3 do
+		local a = math.rad(45 + 90 * k)
+		post(ctx, "DoorEdge", 0.14, wingH, { math.cos(a) * 4.02, doorY, zf + math.sin(a) * 4.02 }, wingMetal)
 	end
 	for _, sx in { -1, 1 } do
 		local x = sx * (doorHalf + TOP_W / 20)

@@ -7,6 +7,7 @@
 	  * during the night a few offices switch their lights on and off
 	  * the red aircraft warning lights blink
 	  * street lamps, floodlights and canopy lights only shine at night
+	  * the server runs the revolving doors, so they turn smoothly for everyone
 ]]
 
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -94,6 +95,19 @@ local function flipRandomOffice()
 		end
 	end
 end
+
+-- Revolving doors
+local function claim(inst: Instance)
+	if inst:IsA("BasePart") then
+		pcall(function()
+			inst:SetNetworkOwner(nil)
+		end)
+	end
+end
+for _, inst in CollectionService:GetTagged("TowerSpinner") do
+	claim(inst)
+end
+CollectionService:GetInstanceAddedSignal("TowerSpinner"):Connect(claim)
 
 -- Red aircraft lights
 task.spawn(function()

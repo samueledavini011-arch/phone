@@ -139,8 +139,8 @@ skyscrapers so they look like real office towers:
 - Glass curtain walls with metal window frames and floor bands, and lit
   offices behind the glass (desks, blinds and ceiling lights). The top
   floors glow purple at night.
-- A stone base with sloped sides, a lobby you can walk into through the
-  revolving door, an entrance canopy and a backlit sign.
+- A stone base with sloped sides, an entrance canopy, a backlit sign and a
+  revolving door that slowly turns. You can walk through it into the lobby.
 - A plant floor with louvres and a glass terrace railing at the setback, and
   thin LED lines on the corners in the brand colours.
 - A louvred crown with the brand name on it, roof machinery, and a lattice
@@ -172,6 +172,9 @@ ServerScriptService. It switches the office lights on at dusk and off at
 dawn, turns a few offices on and off during the night, blinks the red
 aircraft lights, and only runs the street lamps and floodlights at night.
 
+The revolving door is turned by a motor (a HingeConstraint), so it only
+moves while the game is running. Press Play to see it turn.
+
 If it can't tell which tower you selected, give it the name:
 `require(game.ServerStorage.PhoneTowers).ReplaceSelected("Pearl Phones")`.
 If it faces the wrong way, add how many degrees to turn it:
@@ -180,13 +183,27 @@ If it faces the wrong way, add how many degrees to turn it:
 The towers look best with **Lighting > Technology** set to **Future**, and a
 **Bloom** effect in Lighting so the neon glows.
 
+## Update
+
+Already built your towers with an older `PhoneTowers.rbxmx`? Delete
+**PhoneTowers** from ServerStorage, insert the new file the same way, then
+run this in the Command Bar:
+
+```lua
+require(game.ServerStorage.PhoneTowers).Rebuild()
+```
+
+It rebuilds every tower in the same spot and at the same size, puts the old
+ones in **ServerStorage > OldTowers**, and updates TowerLights.
+
 ## Change it
 
 Open **PhoneTowers > TowerConfig**. Each tower has its sign text, logo
 (`pearl`, `star`, `ring`, `none` or an image ID), window tint, LED colours,
 the purple of the top-floor offices, how many floors it has above and below
 the setback, and whether to build the plaza. `Seed` changes which offices
-have their lights on. Run the Command Bar line again after a change.
+have their lights on. Run `require(game.ServerStorage.PhoneTowers).Rebuild()`
+after a change.
 
 To build fresh towers without replacing anything, use
 `require(game.ServerStorage.PhoneTowers).Build("Pearl Phones")` or

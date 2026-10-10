@@ -27,6 +27,10 @@
 	Facing the wrong way? Add how many degrees to turn it:
 	    require(game.ServerStorage.PhoneTowers).ReplaceSelected("Pearl Phones", 180)
 
+	Changed TowerConfig, or got a newer PhoneTowers? Rebuild every tower
+	in place with:
+	    require(game.ServerStorage.PhoneTowers).Rebuild()
+
 	Change names, colours and floor counts in TowerConfig.
 ]]
 
@@ -50,6 +54,7 @@ export type BuildOptions = {
 
 local PhoneTowers = {}
 
+local VERSION = 2 -- bump when TowerLights changes, so old copies get replaced
 local SIGN_FONT = Enum.Font.Michroma
 local SIGN_PIXELS = 200 -- sign height in pixels
 
@@ -307,14 +312,64 @@ end
 
 -- Copies TowerLights into ServerScriptService the first time a tower is built.
 local function installLights()
-	if ServerScriptService:FindFirstChild("TowerLights") then
+	local existing = ServerScriptService:FindFirstChild("TowerLights")
+	if existing and existing:GetAttribute("PhoneTowersVersion") == VERSION then
 		return
 	end
 	local source = script:FindFirstChild("TowerLights")
-	if source then
-		source:Clone().Parent = ServerScriptService
-		print("[PhoneTowers] Added TowerLights to ServerScriptService. It switches the office lights at dusk and blinks the red lights.")
+	if not source then
+		return
 	end
+	if existing then
+		existing:Destroy()
+	end
+	local copy = source:Clone()
+	copy:SetAttribute("PhoneTowersVersion", VERSION)
+	copy.Parent = ServerScriptService
+	print("[PhoneTowers] Put TowerLights in ServerScriptService. It switches the office lights at dusk and blinks the red lights.")
+end
+
+type Spinner = { base: BasePart?, hub: BasePart?, parts: { BasePart }, speed: number }
+
+-- Parts that turn, like the revolving door: they are welded to their hub,
+-- and a motor turns the hub on the still base part. Roblox physics runs the
+-- motor during the game, so no script is needed.
+local function makeSpinner(s: Spinner)
+	local base, hub = s.base, s.hub
+	if not base or not hub then
+		return
+	end
+	for _, part in s.parts do
+		part.Anchored = false
+		part.Massless = true
+		part.CanCollide = false
+		part.CanQuery = false
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = hub
+		weld.Part1 = part
+		weld.Parent = part
+	end
+	hub.Anchored = false
+	hub.CanCollide = false
+	hub.CanQuery = false
+
+	local onBase = Instance.new("Attachment")
+	onBase.Name = "SpinBase"
+	onBase.CFrame = base.CFrame:ToObjectSpace(hub.CFrame)
+	onBase.Parent = base
+	local onHub = Instance.new("Attachment")
+	onHub.Name = "SpinHub"
+	onHub.Parent = hub
+
+	local motor = Instance.new("HingeConstraint")
+	motor.Name = "Motor"
+	motor.Attachment0 = onBase
+	motor.Attachment1 = onHub
+	motor.ActuatorType = Enum.ActuatorType.Motor
+	motor.AngularVelocity = s.speed
+	motor.MotorMaxTorque = 1e7
+	motor.Parent = hub
+	CollectionService:AddTag(hub, "TowerSpinner")
 end
 
 local function buildTower(t: Tower, options: BuildOptions?): Model
@@ -338,11 +393,29 @@ local function buildTower(t: Tower, options: BuildOptions?): Model
 		folders[group] = folder
 		return folder
 	end
+	local spinners: { [string]: Spinner } = {}
 	for _, p in shapes.prims do
-		makePart(p, scale, night, name).Parent = folderFor(p.group)
+		local part = makePart(p, scale, night, name)
+		part.Parent = folderFor(p.group)
+		local spin = p.spin
+		if spin then
+			local spinner: Spinner = spinners[spin.id] or { parts = {}, speed = spin.speed }
+			spinners[spin.id] = spinner
+			if spin.role == "base" then
+				spinner.base = part
+			elseif spin.role == "hub" then
+				spinner.hub = part
+			else
+				table.insert(spinner.parts, part)
+			end
+		end
+	end
+	for _, spinner in spinners do
+		makeSpinner(spinner)
 	end
 	model.WorldPivot = CFrame.new()
 	model:SetAttribute("PhoneTower", name)
+	model:SetAttribute("Scale", scale)
 	if o.cframe then
 		model:PivotTo(o.cframe)
 	end
@@ -427,6 +500,35 @@ local function readOldSign(root: Instance): (string?, Vector3?)
 	return nil, nil
 end
 
+local function swap(old: Instance, tower: Tower, scale: number, where: CFrame): Model
+	local history = game:GetService("ChangeHistoryService") :: any
+	pcall(function()
+		history:SetWaypoint("Before PhoneTowers")
+	end)
+	local model = buildTower(tower, { scale = scale, cframe = where, parent = old.Parent })
+	local backup = ServerStorage:FindFirstChild("OldTowers")
+	if not backup then
+		backup = Instance.new("Folder")
+		backup.Name = "OldTowers"
+		backup.Parent = ServerStorage
+	end
+	old.Parent = backup
+	pcall(function()
+		history:SetWaypoint("PhoneTowers")
+	end)
+	return model
+end
+
+-- A tower this module built: same spot, same size, same way round.
+local function rebuildOurs(old: Model, tower: Tower, turn: number?): Model
+	local scale = old:GetAttribute("Scale")
+	if type(scale) ~= "number" then
+		local lo, hi = worldBounds(old)
+		scale = if lo and hi then (hi.Y - lo.Y) / TowerGeometry.Shapes(tower).height else 1
+	end
+	return swap(old, tower, scale :: number, old:GetPivot() * CFrame.Angles(0, math.rad(turn or 0), 0))
+end
+
 -- Swaps the selected old building for a realistic one of the same height.
 function PhoneTowers.ReplaceSelected(name: string?, turn: number?): Model?
 	local Selection = game:GetService("Selection") :: any
@@ -436,13 +538,26 @@ function PhoneTowers.ReplaceSelected(name: string?, turn: number?): Model?
 		return nil
 	end
 	local old = topModel(picked)
+	local towers = loadConfig()
+
+	local ours = old:GetAttribute("PhoneTower")
+	if type(ours) == "string" and old:IsA("Model") then
+		local tower = findTower(towers, name or ours)
+		if not tower then
+			warn(`[PhoneTowers] No tower called "{name or ours}" in TowerConfig. Try one of: {towerNames(towers)}`)
+			return nil
+		end
+		local model = rebuildOurs(old, tower, turn)
+		Selection:Set({ model })
+		print(`[PhoneTowers] Rebuilt "{model.Name}". The previous one is in ServerStorage > OldTowers.`)
+		return model
+	end
+
 	local lo, hi = worldBounds(old)
 	if not lo or not hi then
 		warn(`[PhoneTowers] "{old.Name}" has no visible parts to measure. Select the whole building.`)
 		return nil
 	end
-
-	local towers = loadConfig()
 	local signText, facing = readOldSign(old)
 	local tower: Tower?
 	if name then
@@ -468,26 +583,34 @@ function PhoneTowers.ReplaceSelected(name: string?, turn: number?): Model?
 	end
 	local where = CFrame.lookAt(base, base + look.Unit) * CFrame.Angles(0, math.rad(turn or 0), 0)
 
-	local history = game:GetService("ChangeHistoryService") :: any
-	pcall(function()
-		history:SetWaypoint("Before PhoneTowers")
-	end)
-
-	local model = buildTower(tower, { scale = scale, cframe = where, parent = old.Parent })
-	local backup = ServerStorage:FindFirstChild("OldTowers")
-	if not backup then
-		backup = Instance.new("Folder")
-		backup.Name = "OldTowers"
-		backup.Parent = ServerStorage
-	end
-	old.Parent = backup
-
-	pcall(function()
-		history:SetWaypoint("PhoneTowers")
-	end)
+	local model = swap(old, tower, scale, where)
 	Selection:Set({ model })
 	print(`[PhoneTowers] Built "{model.Name}" ({math.floor(height + 0.5)} studs tall). The old one is in ServerStorage > OldTowers.`)
 	return model
+end
+
+-- Rebuilds every tower this module made, where it stands. Use it after
+-- changing TowerConfig or putting in a newer PhoneTowers.
+function PhoneTowers.Rebuild(): { Model }
+	local towers = loadConfig()
+	local found: { Model } = {}
+	for _, d in workspace:GetDescendants() do
+		if d:IsA("Model") and type(d:GetAttribute("PhoneTower")) == "string" then
+			table.insert(found, d)
+		end
+	end
+	local models = {}
+	for _, old in found do
+		local name = old:GetAttribute("PhoneTower") :: string
+		local tower = findTower(towers, name)
+		if tower then
+			table.insert(models, rebuildOurs(old, tower))
+		else
+			warn(`[PhoneTowers] Skipped "{name}": it is not in TowerConfig any more.`)
+		end
+	end
+	print(`[PhoneTowers] Rebuilt {#models} tower(s). The previous ones are in ServerStorage > OldTowers.`)
+	return models
 end
 
 return PhoneTowers
@@ -577,6 +700,12 @@ export type Sign = {
 	face: string, -- "Front" or "Back"
 }
 
+export type Spin = {
+	id: string, -- parts with the same id turn together
+	role: string, -- "base" stays still, "hub" is the axle (turns about its own X axis), "part" is fixed to the hub
+	speed: number, -- radians per second
+}
+
 export type Prim = {
 	kind: string, -- "box", "wedge", "cyl" (round ends on its own X axis) or "ball"
 	name: string,
@@ -595,6 +724,7 @@ export type Prim = {
 	dayColor: RGB?, -- Room and Lamp parts: colour while the lights are off
 	light: Light?,
 	sign: Sign?,
+	spin: Spin?,
 }
 
 export type Tower = { -- one entry in TowerConfig
@@ -676,6 +806,7 @@ type Props = {
 	dayColor: RGB?,
 	light: Light?,
 	sign: Sign?,
+	spin: Spin?,
 }
 
 type Ctx = { prims: { Prim }, group: string }
@@ -699,6 +830,7 @@ local function add(ctx: Ctx, kind: string, name: string, size: Vec, pos: Vec, ro
 		dayColor = p.dayColor,
 		light = p.light,
 		sign = p.sign,
+		spin = p.spin,
 	})
 end
 
@@ -1050,12 +1182,28 @@ local function podium(ctx: Ctx, t: Tower, accent: RGB, rand: () -> number)
 		box(ctx, "Fascia", { TOP_W + 0.4, 2.4, 1 }, { 0, PODIUM_H - 1.4, z + out * 1.2 }, DARK_METAL)
 	end
 
-	-- Revolving door and side doors
-	local door = { 0, (LOBBY + DOOR_TOP) / 2, zf }
-	post(ctx, "RevolvingDoor", 4.2, DOOR_TOP - LOBBY, door, { color = { 200, 220, 230 }, material = "Glass", transparency = 0.7, solid = false })
-	post(ctx, "DoorDrum", 4.5, 0.8, { 0, DOOR_TOP + 0.3, zf }, DARK_METAL)
+	-- Revolving door: four glass wings turn slowly round the centre post
+	local doorY = (LOBBY + DOOR_TOP) / 2
+	local wingH = DOOR_TOP - LOBBY - 0.4
+	local door = { 0, doorY, zf }
+	local function turning(role: string): Spin
+		return { id = "RevolvingDoor", role = role, speed = 0.45 }
+	end
+	local wingGlass: Props = { color = { 200, 220, 230 }, material = "Glass", transparency = 0.5, solid = false, spin = turning("part") }
+	local wingMetal: Props = { color = MULLION.color, material = "Metal", solid = false, spin = turning("part") }
+	post(ctx, "DoorEnclosure", 4.2, DOOR_TOP - LOBBY, door, { color = { 200, 220, 230 }, material = "Glass", transparency = 0.75, solid = false })
+	post(ctx, "DoorDrum", 4.5, 0.8, { 0, DOOR_TOP + 0.3, zf }, { color = DARK_METAL.color, material = "Metal", spin = turning("base") })
+	post(ctx, "DoorPost", 0.35, wingH, door, { color = DARK_METAL.color, material = "Metal", solid = false, spin = turning("hub") })
 	for _, a in { 45, -45 } do
-		add(ctx, "box", "DoorWing", { 8.2, DOOR_TOP - LOBBY - 0.4, 0.12 }, door, rotY(a), { color = { 200, 220, 230 }, material = "Glass", transparency = 0.5, solid = false })
+		add(ctx, "box", "DoorWing", { 8.1, wingH, 0.12 }, door, rotY(a), wingGlass)
+		add(ctx, "box", "DoorPushBar", { 7.2, 0.18, 0.32 }, { 0, LOBBY + 4, zf }, rotY(a), wingMetal)
+		for _, y in { doorY - wingH / 2 + 0.15, doorY + wingH / 2 - 0.15 } do
+			add(ctx, "box", "DoorRail", { 8.1, 0.3, 0.26 }, { 0, y, zf }, rotY(a), wingMetal)
+		end
+	end
+	for k = 0, 3 do
+		local a = math.rad(45 + 90 * k)
+		post(ctx, "DoorEdge", 0.14, wingH, { math.cos(a) * 4.02, doorY, zf + math.sin(a) * 4.02 }, wingMetal)
 	end
 	for _, sx in { -1, 1 } do
 		local x = sx * (doorHalf + TOP_W / 20)
@@ -1345,6 +1493,7 @@ return TowerGeometry
 	  * during the night a few offices switch their lights on and off
 	  * the red aircraft warning lights blink
 	  * street lamps, floodlights and canopy lights only shine at night
+	  * the server runs the revolving doors, so they turn smoothly for everyone
 ]]
 
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -1432,6 +1581,19 @@ local function flipRandomOffice()
 		end
 	end
 end
+
+-- Revolving doors
+local function claim(inst: Instance)
+	if inst:IsA("BasePart") then
+		pcall(function()
+			inst:SetNetworkOwner(nil)
+		end)
+	end
+end
+for _, inst in CollectionService:GetTagged("TowerSpinner") do
+	claim(inst)
+end
+CollectionService:GetInstanceAddedSignal("TowerSpinner"):Connect(claim)
 
 -- Red aircraft lights
 task.spawn(function()
