@@ -164,7 +164,7 @@ Each tower is about 600 parts.
 
    The new tower appears in the same spot and at the same height, facing
    the same way as the old sign. The old building moves to
-   **ServerStorage > OldTowers**, so nothing is lost. Ctrl+Z undoes it.
+   **ServerStorage > OldTowers**, so nothing is lost.
 4. Do the same for the Starsung Phones building.
 
 The first time, it also adds a script called **TowerLights** to
