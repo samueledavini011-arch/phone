@@ -1,0 +1,23 @@
+{
+  "name": "gamepass-shop",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "ShopConfig": {
+        "$path": "src/shared/ShopConfig.luau"
+      }
+    },
+    "ServerScriptService": {
+      "ShopServer": {
+        "$path": "src/server/ShopServer.server.luau"
+      }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "ShopClient": {
+          "$path": "src/client/ShopClient.client.luau"
+        }
+      }
+    }
+  }
+}
