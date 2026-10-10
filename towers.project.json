@@ -1,0 +1,15 @@
+{
+  "name": "PhoneTowers",
+  "tree": {
+    "$path": "src/towers/PhoneTowers.luau",
+    "TowerConfig": {
+      "$path": "src/towers/TowerConfig.luau"
+    },
+    "TowerGeometry": {
+      "$path": "src/towers/TowerGeometry.luau"
+    },
+    "TowerLights": {
+      "$path": "src/towers/TowerLights.server.luau"
+    }
+  }
+}

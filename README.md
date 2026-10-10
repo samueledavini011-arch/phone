@@ -130,3 +130,67 @@ the `COLORS` table right below it.
 
 To rebuild the file after editing the script, run
 `rojo build loading.project.json -o LoadingScreen.rbxmx`.
+
+# Phone towers
+
+`PhoneTowers.rbxmx` rebuilds the Pearl Phones and Starsung Phones
+skyscrapers so they look like real office towers:
+
+- Glass curtain walls with metal window frames and floor bands, and lit
+  offices behind the glass (desks, blinds and ceiling lights). The top
+  floors glow purple at night.
+- A stone base with sloped sides, a lobby you can walk into through the
+  revolving door, an entrance canopy and a backlit sign.
+- A plant floor with louvres and a glass terrace railing at the setback, and
+  thin LED lines on the corners in the brand colours.
+- A louvred crown with the brand name on it, roof machinery, and a lattice
+  antenna with microwave dishes and red aircraft lights.
+- Paving, steps, trees, street lamps and a monument sign around the base.
+- Real lights: street lamps, uplights on the stone, floodlights on the tower
+  and lights in the lobby and under the canopy.
+
+Each tower is about 600 parts.
+
+## Install
+
+1. In Roblox Studio, right-click **ServerStorage** in the Explorer, pick
+   **Insert from File...** and choose `PhoneTowers.rbxmx`.
+2. Click your old Pearl Phones building in the 3D view so it is selected.
+3. Open **View > Command Bar**, paste this line and press Enter:
+
+   ```lua
+   require(game.ServerStorage.PhoneTowers).ReplaceSelected()
+   ```
+
+   The new tower appears in the same spot and at the same height, facing
+   the same way as the old sign. The old building moves to
+   **ServerStorage > OldTowers**, so nothing is lost. Ctrl+Z undoes it.
+4. Do the same for the Starsung Phones building.
+
+The first time, it also adds a script called **TowerLights** to
+ServerScriptService. It switches the office lights on at dusk and off at
+dawn, turns a few offices on and off during the night, blinks the red
+aircraft lights, and only runs the street lamps and floodlights at night.
+
+If it can't tell which tower you selected, give it the name:
+`require(game.ServerStorage.PhoneTowers).ReplaceSelected("Pearl Phones")`.
+If it faces the wrong way, add how many degrees to turn it:
+`require(game.ServerStorage.PhoneTowers).ReplaceSelected("Pearl Phones", 180)`.
+
+The towers look best with **Lighting > Technology** set to **Future**, and a
+**Bloom** effect in Lighting so the neon glows.
+
+## Change it
+
+Open **PhoneTowers > TowerConfig**. Each tower has its sign text, logo
+(`pearl`, `star`, `ring`, `none` or an image ID), window tint, LED colours,
+the purple of the top-floor offices, how many floors it has above and below
+the setback, and whether to build the plaza. `Seed` changes which offices
+have their lights on. Run the Command Bar line again after a change.
+
+To build fresh towers without replacing anything, use
+`require(game.ServerStorage.PhoneTowers).Build("Pearl Phones")` or
+`.BuildAll()`.
+
+To rebuild the file after editing the scripts, run
+`rojo build towers.project.json -o PhoneTowers.rbxmx`.
