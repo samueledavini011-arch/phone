@@ -1,0 +1,15 @@
+{
+  "name": "GamepassShop",
+  "tree": {
+    "$path": "src/installer/GamepassShop.server.luau",
+    "ShopConfig": {
+      "$path": "src/shared/ShopConfig.luau"
+    },
+    "ShopServer": {
+      "$path": "src/server/ShopServer.server.luau"
+    },
+    "ShopClient": {
+      "$path": "src/client/ShopClient.client.luau"
+    }
+  }
+}

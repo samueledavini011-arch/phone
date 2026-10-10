@@ -18,6 +18,23 @@ close button, and a small SHOP button on the left that opens it.
 | `_turn` | The red X spins while you hover it |
 | `_fall` | The VIP squares and the little card icons keep falling |
 
+## Install with one file (easiest)
+
+1. Download `GamepassShop.rbxmx` from this repo to your computer.
+2. In Roblox Studio, right-click **ServerScriptService** in the Explorer and
+   pick **Insert from File...**, then choose `GamepassShop.rbxmx`.
+   Dragging the file into the Studio window also works.
+3. Press Play and click the rainbow SHOP button on the left.
+4. Click **File > Publish to Roblox** to save it to your game.
+
+The settings live in the `ShopConfig` inside the `GamepassShop` script.
+When the game runs, it moves itself into ReplicatedStorage and the shop UI
+moves into StarterPlayerScripts. Use either this method or the copy and
+paste method below, not both.
+
+To rebuild the file after changing the scripts, run
+`rojo build install.project.json -o GamepassShop.rbxmx`.
+
 ## Install by copy and paste
 
 Create these three scripts in Roblox Studio and paste in the matching file.
