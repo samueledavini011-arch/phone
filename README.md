@@ -96,3 +96,33 @@ Set `OpenOnJoin = true` in `ShopConfig` to pop it open when players join.
   `ClickSound` in `ShopConfig` to turn them on.
 - The "+500 IDK" and "+2x IDK" text is copied from the video as is. Change
   `Line1` and `Line2` in `ShopConfig` to your real currency name.
+
+# Loading screen
+
+`src/loading/LoadingScreen.client.luau` is a loading screen for Grow a Phone.
+A phone grows out of a dirt plot under a neon night city while a battery bar
+charges. At 100% the phone lights up and a PLAY button pops in. Pressing PLAY
+zooms into the phone's screen and into the game.
+
+The bar follows real loading: the game itself, then the images, sounds and
+meshes in ReplicatedStorage and StarterGui, then the player's character. It
+stays up for at least 4 seconds, and a SKIP button appears after 8 seconds.
+
+## Install
+
+1. Delete or disable your old loading screen so the two don't overlap.
+2. In Roblox Studio, right-click **ReplicatedFirst** in the Explorer, pick
+   **Insert from File...** and choose `LoadingScreen.rbxmx`.
+   Or create a LocalScript in ReplicatedFirst and paste in the file's code.
+   It must be in ReplicatedFirst, or it shows up too late.
+3. Press Play to see it, then click **File > Publish to Roblox**.
+
+## Change it
+
+Everything you might change is in the `CONFIG` table at the top of the
+script: the title, the status messages, the tips, how long it stays up,
+whether it waits for PLAY, and optional music and sound IDs. Colours are in
+the `COLORS` table right below it.
+
+To rebuild the file after editing the script, run
+`rojo build loading.project.json -o LoadingScreen.rbxmx`.

@@ -1,0 +1,6 @@
+{
+  "name": "LoadingScreen",
+  "tree": {
+    "$path": "src/loading/LoadingScreen.client.luau"
+  }
+}
