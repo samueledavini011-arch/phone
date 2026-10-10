@@ -99,14 +99,18 @@ Set `OpenOnJoin = true` in `ShopConfig` to pop it open when players join.
 
 # Loading screen
 
-`src/loading/LoadingScreen.client.luau` is a loading screen for Grow a Phone.
-A phone grows out of a dirt plot under a neon night city while a battery bar
-charges. At 100% the phone lights up and a PLAY button pops in. Pressing PLAY
+`src/loading/LoadingScreen.client.luau` is a loading screen for Grow a Phone,
+drawn to look hand-made. Outlines are wobbly marker lines that jitter like
+hand-drawn animation, the night sky is coloured in with crayon strokes, the
+text is handwritten and tips sit on a sticky note.
+
+A phone grows out of the dirt while the battery gets coloured in with a
+marker. At 100% the phone lights up and a PLAY button pops in. Pressing PLAY
 zooms into the phone's screen and into the game.
 
 The bar follows real loading: the game itself, then the images, sounds and
 meshes in ReplicatedStorage and StarterGui, then the player's character. It
-stays up for at least 4 seconds, and a SKIP button appears after 8 seconds.
+stays up for at least 4 seconds, and a skip link appears after 8 seconds.
 
 ## Install
 

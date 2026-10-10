@@ -6,10 +6,13 @@
 --[[
 	LoadingScreen  (LocalScript, goes in ReplicatedFirst)
 
-	The Grow a Phone loading screen. A phone grows out of a dirt plot under a
-	neon night city while the battery bar charges. At 100% the phone lights
-	up and a PLAY button pops in. Pressing PLAY zooms into the phone's screen
-	and drops the player into the game.
+	The Grow a Phone loading screen, drawn to look hand-made: wobbly marker
+	outlines that jitter like hand-drawn animation, crayon colouring,
+	handwritten text and a sticky note for tips.
+
+	A phone grows out of the dirt while the battery gets coloured in with a
+	marker. At 100% the phone lights up and a PLAY button pops in. Pressing
+	PLAY zooms into the phone's screen and drops the player into the game.
 
 	The progress is real. It waits for the game to load, preloads the
 	images, sounds and meshes in ReplicatedStorage and StarterGui, then waits
@@ -22,19 +25,21 @@
 local CONFIG = {
 	TitleTop = "GROW A",
 	TitleBottom = "PHONE",
+	PhoneNote = "your phone!", -- the doodled note pointing at the phone
+	ReadyNote = "it's ready!!",
 
 	MinimumTime = 4, -- seconds the screen stays up, even if loading is instant
 	MaxWait = 25, -- stop waiting for slow assets after this many seconds
 	ShowPlayButton = true, -- wait for PLAY at 100%; false goes straight in
-	SkipAfter = 8, -- show a SKIP button after this many seconds (0 = never)
+	SkipAfter = 8, -- show a skip button after this many seconds (0 = never)
 
 	Statuses = {
-		{ At = 0.0, Text = "Planting your seeds..." },
-		{ At = 0.25, Text = "Watering the soil..." },
-		{ At = 0.5, Text = "Charging batteries..." },
-		{ At = 0.75, Text = "Bringing back your phones..." },
+		{ At = 0.0, Text = "planting your seeds..." },
+		{ At = 0.25, Text = "watering the soil..." },
+		{ At = 0.5, Text = "charging batteries..." },
+		{ At = 0.75, Text = "bringing back your phones..." },
 	},
-	ReadyText = "Your phones are ready!",
+	ReadyText = "your phones are ready!",
 
 	Tips = {
 		"Your plot is saved - your phones will be waiting next time",
@@ -55,41 +60,35 @@ local CONFIG = {
 	ClickSound = "",
 }
 
+-- Marker and crayon colours
 local COLORS = {
-	SkyTop = Color3.fromRGB(14, 8, 36),
-	SkyBottom = Color3.fromRGB(74, 32, 136),
-	Horizon = Color3.fromRGB(255, 92, 196),
-	Moon = Color3.fromRGB(255, 240, 206),
-	BuildingBack = Color3.fromRGB(46, 24, 94),
-	BuildingFront = Color3.fromRGB(27, 14, 60),
-	WindowWarm = Color3.fromRGB(255, 220, 120),
-	WindowCool = Color3.fromRGB(120, 236, 255),
-	Neon = Color3.fromRGB(70, 230, 255),
-	NeonPink = Color3.fromRGB(255, 92, 196),
-	DirtTop = Color3.fromRGB(104, 66, 42),
-	DirtBottom = Color3.fromRGB(56, 33, 22),
-	Speck = Color3.fromRGB(40, 22, 14),
-	Ink = Color3.fromRGB(22, 12, 40),
-	Gold1 = Color3.fromRGB(255, 244, 128),
-	Gold2 = Color3.fromRGB(255, 194, 26),
-	Leaf = Color3.fromRGB(110, 218, 88),
-	LeafDark = Color3.fromRGB(56, 156, 56),
-	Bezel = Color3.fromRGB(250, 250, 255),
-	ScreenOff1 = Color3.fromRGB(44, 46, 84),
-	ScreenOff2 = Color3.fromRGB(22, 22, 48),
-	ScreenOn1 = Color3.fromRGB(124, 208, 255),
-	ScreenOn2 = Color3.fromRGB(42, 124, 246),
-	Track = Color3.fromRGB(30, 17, 62),
-	Low = Color3.fromRGB(255, 96, 96),
-	Mid = Color3.fromRGB(255, 212, 64),
-	High = Color3.fromRGB(112, 240, 90),
-	Play1 = Color3.fromRGB(140, 255, 112),
-	Play2 = Color3.fromRGB(46, 194, 70),
-	Glow = Color3.fromRGB(180, 110, 255),
+	Paper = Color3.fromRGB(244, 238, 224),
+	Grain = Color3.fromRGB(176, 164, 140),
+	Ink = Color3.fromRGB(30, 22, 40),
+	Sky = Color3.fromRGB(56, 32, 108),
+	SkyHatch = Color3.fromRGB(98, 60, 168),
+	Ground = Color3.fromRGB(124, 82, 50),
+	GroundHatch = Color3.fromRGB(84, 52, 30),
+	Building = Color3.fromRGB(38, 22, 78),
+	Window = Color3.fromRGB(255, 214, 102),
+	Star = Color3.fromRGB(255, 232, 128),
+	Moon = Color3.fromRGB(255, 232, 150),
+	Mound = Color3.fromRGB(150, 98, 60),
+	Leaf = Color3.fromRGB(106, 198, 80),
+	PhoneWhite = Color3.fromRGB(252, 250, 244),
+	ScreenOff = Color3.fromRGB(70, 72, 104),
+	ScreenOn = Color3.fromRGB(92, 172, 250),
+	Marker = Color3.fromRGB(86, 198, 70),
+	BoxPaper = Color3.fromRGB(250, 245, 232),
+	Note = Color3.fromRGB(255, 236, 134),
+	Yellow = Color3.fromRGB(255, 214, 64),
+	Pink = Color3.fromRGB(255, 122, 172),
+	PlayGreen = Color3.fromRGB(112, 214, 90),
 	White = Color3.new(1, 1, 1),
 }
 
-local FONT = Enum.Font.FredokaOne
+local TITLE_FONT = Enum.Font.PermanentMarker
+local HAND_FONT = Enum.Font.PatrickHand
 
 local Players = game:GetService("Players")
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
@@ -102,25 +101,20 @@ local SoundService = game:GetService("SoundService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui") :: PlayerGui
 
--- The middle of the screen is designed at 1280 x 720 and scaled to fit.
+-- The drawing is designed at 1280 x 720 and scaled to fit the screen.
 local STAGE_W, STAGE_H = 1280, 720
 local CX = STAGE_W / 2
-local PHONE_BOTTOM, PHONE_W, PHONE_H = 432, 104, 176
+local PANEL_X, PANEL_Y, PANEL_W, PANEL_H = 36, 26, 1208, 668
+local GROUND_Y = 500
+local PHONE_BOTTOM, PHONE_W, PHONE_H = 470, 104, 176
 local PHONE_CY = PHONE_BOTTOM - PHONE_H / 2
-local MOUND_Y = 500
-local BAR_Y, BAR_W, BAR_H = 568, 560, 46
-local STATUS_Y, TIP_Y = 624, 684
-local GROUND = 0.72 -- where the ground starts, as a fraction of screen height
+local MOUND_Y = 506
+local BAR_X, BAR_Y, BAR_W, BAR_H = 610, 584, 440, 50
+local STATUS_Y = 642
 
 --------------------------------------------------------------------------
 -- Helpers
 --------------------------------------------------------------------------
-
-type Animator = (t: number, dt: number) -> ()
-local animators: { Animator } = {}
-local function animate(fn: Animator)
-	table.insert(animators, fn)
-end
 
 local function frame(name: string, parent: Instance, pos: UDim2, size: UDim2, color: Color3?, transparency: number?): Frame
 	local f = Instance.new("Frame")
@@ -144,9 +138,7 @@ local function corner(parent: Instance, radius: UDim)
 	c.Parent = parent
 end
 
-local function round(parent: Instance)
-	corner(parent, UDim.new(0.5, 0))
-end
+local ROUND = UDim.new(0.5, 0)
 
 local function stroke(parent: Instance, color: Color3, thickness: number, border: boolean?): UIStroke
 	local s = Instance.new("UIStroke")
@@ -160,21 +152,13 @@ local function stroke(parent: Instance, color: Color3, thickness: number, border
 	return s
 end
 
-local function gradient(parent: Instance, top: Color3, bottom: Color3, rotation: number?): UIGradient
-	local g = Instance.new("UIGradient")
-	g.Color = ColorSequence.new(top, bottom)
-	g.Rotation = rotation or 90
-	g.Parent = parent
-	return g
-end
-
-local function label(name: string, parent: Instance, text: string, pos: UDim2, size: UDim2, textSize: number, outline: number?): TextLabel
+local function label(name: string, parent: Instance, text: string, pos: UDim2, size: UDim2, font: Enum.Font, textSize: number, outline: number?): TextLabel
 	local l = Instance.new("TextLabel")
 	l.Name = name
 	l.BackgroundTransparency = 1
 	l.Position = pos
 	l.Size = size
-	l.Font = FONT
+	l.Font = font
 	l.Text = text
 	l.TextSize = textSize
 	l.TextColor3 = COLORS.White
@@ -233,7 +217,118 @@ local function playOnce(id: string)
 end
 
 --------------------------------------------------------------------------
--- Screen and background
+-- The hand-drawn look
+--------------------------------------------------------------------------
+
+-- "Boiling" lines: like hand-drawn animation, each line is redrawn eight
+-- times a second with a slightly different wobble.
+type Boil = { obj: GuiObject, pos: UDim2, rot: number, rotAmp: number, posAmp: number, seed: number }
+local boils: { Boil } = {}
+local seedCounter = 0
+
+local function boil(obj: GuiObject, rotAmp: number, posAmp: number)
+	seedCounter += 1
+	table.insert(boils, { obj = obj, pos = obj.Position, rot = obj.Rotation, rotAmp = rotAmp, posAmp = posAmp, seed = seedCounter })
+end
+
+local function noise(a: number, b: number): number
+	local x = math.sin(a * 127.1 + b * 311.7) * 43758.5453
+	return x - math.floor(x)
+end
+
+local lastBoilFrame = -1
+local function updateBoil(t: number)
+	local f = math.floor(t * 8)
+	if f == lastBoilFrame then
+		return
+	end
+	lastBoilFrame = f
+	for _, b in boils do
+		local r = noise(b.seed, f) * 2 - 1
+		local dx = (noise(b.seed + 0.37, f) * 2 - 1) * b.posAmp
+		local dy = (noise(b.seed + 0.71, f) * 2 - 1) * b.posAmp
+		b.obj.Rotation = b.rot + r * b.rotAmp
+		b.obj.Position = b.pos + UDim2.fromOffset(dx, dy)
+	end
+end
+
+-- A shape drawn the way a person would: the colour is a little off the
+-- lines, and the outline is two wobbly marker passes.
+type Sketch = { root: Frame, fill: Frame?, lines: { Frame } }
+local function sketch(parent: Instance, name: string, center: Vector2, size: Vector2, fillColor: Color3?, radius: UDim, z: number, thickness: number): Sketch
+	local root = frame(name, parent, UDim2.fromOffset(center.X, center.Y), UDim2.fromOffset(size.X, size.Y))
+	root.AnchorPoint = Vector2.new(0.5, 0.5)
+	root.ZIndex = z
+	local fill: Frame? = nil
+	if fillColor then
+		local f = frame("Fill", root, UDim2.fromOffset(3, 3), UDim2.fromScale(1, 1), fillColor)
+		f.Rotation = -0.6
+		f.ZIndex = z
+		corner(f, radius)
+		fill = f
+	end
+	local amp = math.min(0.9, 140 / math.max(size.X, size.Y))
+	local lines: { Frame } = {}
+	for i = 1, 2 do
+		local line = frame("Line", root, if i == 1 then UDim2.new() else UDim2.fromOffset(-2, 1), UDim2.fromScale(1, 1))
+		line.Rotation = if i == 1 then 0 else amp * 0.6
+		line.ZIndex = z
+		corner(line, radius)
+		stroke(line, COLORS.Ink, if i == 1 then thickness else math.max(1.5, thickness * 0.55), true)
+		boil(line, amp, 1.2)
+		table.insert(lines, line)
+	end
+	return { root = root, fill = fill, lines = lines }
+end
+
+-- A single marker stroke from a to b.
+local function mark(parent: Instance, a: Vector2, b: Vector2, thickness: number, color: Color3, z: number): Frame
+	local mid = (a + b) / 2
+	local d = b - a
+	local f = frame("Mark", parent, UDim2.fromOffset(mid.X, mid.Y), UDim2.fromOffset(d.Magnitude, thickness), color)
+	f.AnchorPoint = Vector2.new(0.5, 0.5)
+	f.Rotation = math.deg(math.atan2(d.Y, d.X))
+	f.ZIndex = z
+	corner(f, ROUND)
+	return f
+end
+
+-- Crayon colouring: lots of slightly uneven parallel strokes.
+type HatchStroke = { obj: Frame, x: number }
+local function hatch(parent: Instance, w: number, h: number, color: Color3, transparency: number, spacing: number, width: number, angle: number, seed: number, z: number): { HatchStroke }
+	local r = Random.new(seed)
+	local strokes: { HatchStroke } = {}
+	local length = (w + h) * 1.25
+	local count = math.ceil((w + 2 * h) / spacing)
+	for i = 0, count do
+		local x = -h + i * spacing + r:NextNumber(-2, 2)
+		local s = frame("Stroke", parent, UDim2.fromOffset(x, h / 2 + r:NextNumber(-6, 6)), UDim2.fromOffset(length * r:NextNumber(0.85, 1), width * r:NextNumber(0.75, 1.25)), color, math.clamp(transparency + r:NextNumber(-0.08, 0.08), 0, 1))
+		s.AnchorPoint = Vector2.new(0.5, 0.5)
+		s.Rotation = angle + r:NextNumber(-3, 3)
+		s.ZIndex = z
+		corner(s, ROUND)
+		table.insert(strokes, { obj = s, x = x })
+	end
+	return strokes
+end
+
+-- A doodled sparkle: two crossed strokes.
+local function sparkle(parent: Instance, center: Vector2, size: number, color: Color3, z: number): Frame
+	local holder = frame("Sparkle", parent, UDim2.fromOffset(center.X, center.Y), UDim2.fromOffset(size, size))
+	holder.AnchorPoint = Vector2.new(0.5, 0.5)
+	holder.ZIndex = z
+	for _, rot in { 0, 90 } do
+		local bar = frame("Bar", holder, UDim2.fromScale(0.5, 0.5), UDim2.new(1, 0, 0, math.max(2.5, size * 0.2)), color)
+		bar.AnchorPoint = Vector2.new(0.5, 0.5)
+		bar.Rotation = rot
+		bar.ZIndex = z
+		corner(bar, ROUND)
+	end
+	return holder
+end
+
+--------------------------------------------------------------------------
+-- The page and the drawing on it
 --------------------------------------------------------------------------
 
 local gui = Instance.new("ScreenGui")
@@ -244,193 +339,118 @@ gui.ResetOnSpawn = false
 gui.DisplayOrder = 1000
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local background = frame("Background", gui, UDim2.new(), UDim2.fromScale(1, 1), COLORS.White)
-gradient(background, COLORS.SkyTop, COLORS.SkyBottom)
-
-local horizon = frame("HorizonGlow", background, UDim2.fromScale(0, 0.42), UDim2.fromScale(1, GROUND - 0.42), COLORS.Horizon)
-horizon.ZIndex = 1
-local horizonFade = Instance.new("UIGradient")
-horizonFade.Rotation = 90
-horizonFade.Transparency = NumberSequence.new(1, 0.5)
-horizonFade.Parent = horizon
-
+local paper = frame("Paper", gui, UDim2.new(), UDim2.fromScale(1, 1), COLORS.Paper)
 local rng = Random.new(20261010)
-
--- Twinkling stars
-for _ = 1, 70 do
-	local size = rng:NextNumber(2, 4.5)
-	local star = frame("Star", background, UDim2.fromScale(rng:NextNumber(), rng:NextNumber(0, 0.62)), UDim2.fromOffset(size, size), COLORS.White)
-	star.AnchorPoint = Vector2.new(0.5, 0.5)
-	star.ZIndex = 1
-	round(star)
-	local phase, speed = rng:NextNumber(0, math.pi * 2), rng:NextNumber(0.8, 2.2)
-	animate(function(t)
-		star.BackgroundTransparency = 0.2 + 0.65 * (0.5 + 0.5 * math.sin(t * speed + phase))
-	end)
+for _ = 1, 90 do
+	local size = rng:NextNumber(1.5, 3.2)
+	local speck = frame("Grain", paper, UDim2.fromScale(rng:NextNumber(), rng:NextNumber()), UDim2.fromOffset(size, size), COLORS.Grain, 0.5)
+	corner(speck, ROUND)
 end
-
--- Moon with a soft glow
-for i, ring in { { 200, 0.93 }, { 136, 0.86 }, { 86, 0 } } do
-	local m = frame("Moon", background, UDim2.fromScale(0.83, 0.17), UDim2.fromOffset(ring[1], ring[1]), COLORS.Moon, ring[2])
-	m.AnchorPoint = Vector2.new(0.5, 0.5)
-	m.ZIndex = 1 + i
-	round(m)
-	if i == 3 then
-		for _, crater in { { 0.32, 0.38, 0.22 }, { 0.62, 0.62, 0.16 }, { 0.6, 0.28, 0.1 } } do
-			local c = frame("Crater", m, UDim2.fromScale(crater[1], crater[2]), UDim2.fromScale(crater[3], crater[3]), Color3.fromRGB(236, 216, 176))
-			c.AnchorPoint = Vector2.new(0.5, 0.5)
-			c.ZIndex = 4
-			round(c)
-		end
-	end
-end
-
--- Two layers of city skyline that slide past slowly. Each layer holds the
--- same row of buildings twice so the scroll can loop without a seam.
-local function skyline(name: string, z: number, minH: number, maxH: number, color: Color3, speed: number, seed: number)
-	local r = Random.new(seed)
-	local holder = frame(name, background, UDim2.new(), UDim2.fromScale(2, GROUND))
-	holder.ZIndex = z
-	type Building = { x: number, w: number, h: number, edge: Color3?, windows: { { number } } }
-	local buildings: { Building } = {}
-	local x = 0
-	while x < 1 do
-		local w = r:NextNumber(0.045, 0.1)
-		local h = r:NextNumber(minH, maxH)
-		local windows = {}
-		local cols = if w > 0.07 then 4 else 3
-		local rows = math.floor((h - 0.05) / 0.035)
-		for row = 0, rows - 1 do
-			for col = 0, cols - 1 do
-				if r:NextNumber() < 0.3 then
-					table.insert(windows, { (col + 0.5) / cols, (0.04 + row * 0.035) / h, if r:NextNumber() < 0.6 then 1 else 2 })
-				end
-			end
-		end
-		local edgeRoll = r:NextNumber()
-		local edge = if edgeRoll < 0.2 then COLORS.Neon elseif edgeRoll < 0.32 then COLORS.NeonPink else nil
-		table.insert(buildings, { x = x, w = w, h = h, edge = edge, windows = windows })
-		x += w + r:NextNumber(0.004, 0.018)
-	end
-	for copy = 0, 1 do
-		for _, b in buildings do
-			local block = frame("Building", holder, UDim2.fromScale(b.x / 2 + copy * 0.5, 1), UDim2.fromScale(b.w / 2, b.h), color)
-			block.AnchorPoint = Vector2.new(0, 1)
-			block.ZIndex = z
-			if b.edge then
-				local e = frame("NeonEdge", block, UDim2.new(), UDim2.new(1, 0, 0, 3), b.edge, 0.15)
-				e.ZIndex = z
-			end
-			for _, wnd in b.windows do
-				local light = frame("Window", block, UDim2.fromScale(wnd[1], wnd[2]), UDim2.fromScale(0.16, 0.017 / b.h), if wnd[3] == 1 then COLORS.WindowWarm else COLORS.WindowCool, 0.25)
-				light.AnchorPoint = Vector2.new(0.5, 0)
-				light.ZIndex = z
-			end
-		end
-	end
-	animate(function(t)
-		holder.Position = UDim2.fromScale(-((t * speed) % 1), 0)
-	end)
-end
-skyline("SkylineBack", 2, 0.22, 0.46, COLORS.BuildingBack, 0.008, 11)
-skyline("SkylineFront", 3, 0.12, 0.3, COLORS.BuildingFront, 0.016, 29)
-
--- Dirt plot with a neon rail along the top, like the plots in the game
-local ground = frame("Ground", background, UDim2.fromScale(0, GROUND), UDim2.fromScale(1, 1 - GROUND), COLORS.White)
-ground.ZIndex = 4
-gradient(ground, COLORS.DirtTop, COLORS.DirtBottom)
-for _ = 1, 70 do
-	local w = rng:NextNumber(4, 12)
-	local speck = frame("Speck", ground, UDim2.fromScale(rng:NextNumber(), rng:NextNumber(0.1, 0.95)), UDim2.fromOffset(w, w * 0.6), COLORS.Speck, 0.35)
-	speck.ZIndex = 4
-	round(speck)
-end
-for _, glow in { { 30, 0.8 }, { 14, 0.6 }, { 4, 0 } } do
-	local rail = frame("NeonRail", background, UDim2.new(0, 0, GROUND, 0), UDim2.new(1, 0, 0, glow[1]), COLORS.Neon, glow[2])
-	rail.AnchorPoint = Vector2.new(0, 0.5)
-	rail.ZIndex = 5
-	if glow[1] > 4 then
-		local fade = Instance.new("UIGradient")
-		fade.Rotation = 90
-		fade.Transparency = NumberSequence.new({
-			NumberSequenceKeypoint.new(0, 1),
-			NumberSequenceKeypoint.new(0.5, 0),
-			NumberSequenceKeypoint.new(1, 1),
-		})
-		fade.Parent = rail
-	end
-end
-
--- Glowing specks drifting up
-for i = 1, 24 do
-	local size = rng:NextNumber(4, 10)
-	local color = ({ COLORS.Neon, COLORS.NeonPink, COLORS.Gold1 })[i % 3 + 1]
-	local dot = frame("Particle", background, UDim2.new(), UDim2.fromOffset(size, size), color)
-	dot.AnchorPoint = Vector2.new(0.5, 0.5)
-	dot.ZIndex = 6
-	round(dot)
-	local x0, duration, phase = rng:NextNumber(), rng:NextNumber(7, 13), rng:NextNumber()
-	animate(function(t)
-		local k = (t / duration + phase) % 1
-		dot.Position = UDim2.fromScale(x0 + math.sin(t * 0.8 + phase * 6) * 0.015, 1.02 - k * 0.9)
-		dot.BackgroundTransparency = 0.15 + 0.8 * k
-	end)
-end
-
---------------------------------------------------------------------------
--- Middle of the screen
---------------------------------------------------------------------------
 
 local stage = frame("Stage", gui, UDim2.fromScale(0.5, 0.5), UDim2.fromOffset(STAGE_W, STAGE_H))
 stage.AnchorPoint = Vector2.new(0.5, 0.5)
 local fitScale = Instance.new("UIScale")
 fitScale.Parent = stage
 
--- Soft glow and light rays behind the phone
-local glows: { Frame } = {}
-for i, g in { { 560, 0.9 }, { 400, 0.85 }, { 270, 0.78 } } do
-	local glow = frame("Glow", stage, UDim2.fromOffset(CX, PHONE_CY), UDim2.fromOffset(g[1], g[1]), COLORS.Glow, g[2])
-	glow.AnchorPoint = Vector2.new(0.5, 0.5)
-	glow.ZIndex = 1
-	round(glow)
-	glows[i] = glow
-end
-animate(function(t)
-	for i, glow in glows do
-		local base = ({ 560, 400, 270 })[i]
-		local s = base * (1 + 0.04 * math.sin(t * 2 + i))
-		glow.Size = UDim2.fromOffset(s, s)
+-- Night sky and dirt, coloured in with crayon strokes
+local drawing = Instance.new("CanvasGroup")
+drawing.Name = "Drawing"
+drawing.BackgroundTransparency = 1
+drawing.Position = UDim2.fromOffset(PANEL_X, PANEL_Y)
+drawing.Size = UDim2.fromOffset(PANEL_W, PANEL_H)
+drawing.ZIndex = 1
+drawing.Parent = stage
+corner(drawing, UDim.new(0, 18))
+frame("Sky", drawing, UDim2.new(), UDim2.fromScale(1, 1), COLORS.Sky)
+hatch(drawing, PANEL_W, PANEL_H, COLORS.SkyHatch, 0.55, 15, 20, -35, 1, 1)
+local groundTop = GROUND_Y - PANEL_Y
+local dirt = frame("Dirt", drawing, UDim2.fromOffset(0, groundTop), UDim2.fromOffset(PANEL_W, PANEL_H - groundTop), COLORS.Ground)
+dirt.ClipsDescendants = true
+hatch(dirt, PANEL_W, PANEL_H - groundTop, COLORS.GroundHatch, 0.5, 13, 9, 28, 2, 1)
+
+sketch(stage, "Border", Vector2.new(PANEL_X + PANEL_W / 2, PANEL_Y + PANEL_H / 2), Vector2.new(PANEL_W, PANEL_H), nil, UDim.new(0, 18), 3, 5)
+
+-- The horizon, drawn freehand in short strokes
+do
+	local r = Random.new(5)
+	local x, y = PANEL_X + 4, GROUND_Y + r:NextNumber(-3, 3)
+	while x < PANEL_X + PANEL_W - 4 do
+		local nx = math.min(x + r:NextNumber(70, 130), PANEL_X + PANEL_W - 4)
+		local ny = GROUND_Y + r:NextNumber(-4, 4)
+		boil(mark(stage, Vector2.new(x, y), Vector2.new(nx, ny), 4, COLORS.Ink, 5), 0.4, 0.8)
+		x, y = nx, ny
 	end
-end)
-
-local rays = frame("Rays", stage, UDim2.fromOffset(CX, PHONE_CY), UDim2.fromOffset(1000, 1000))
-rays.AnchorPoint = Vector2.new(0.5, 0.5)
-rays.ZIndex = 2
-local rayBars: { Frame } = {}
-for i = 0, 5 do
-	local bar = frame("Ray", rays, UDim2.fromScale(0.5, 0.5), UDim2.new(1, 0, 0, 54), Color3.fromRGB(255, 246, 204), 1)
-	bar.AnchorPoint = Vector2.new(0.5, 0.5)
-	bar.Rotation = i * 30
-	bar.ZIndex = 2
-	local fade = Instance.new("UIGradient")
-	fade.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 1),
-		NumberSequenceKeypoint.new(0.25, 0.8),
-		NumberSequenceKeypoint.new(0.5, 0.55),
-		NumberSequenceKeypoint.new(0.75, 0.8),
-		NumberSequenceKeypoint.new(1, 1),
-	})
-	fade.Parent = bar
-	table.insert(rayBars, bar)
+	for _ = 1, 14 do
+		local gx = r:NextNumber(PANEL_X + 30, PANEL_X + PANEL_W - 30)
+		if math.abs(gx - CX) > 170 then
+			local base = Vector2.new(gx, GROUND_Y + 2)
+			boil(mark(stage, base, base + Vector2.new(-7, -14), 3, COLORS.Leaf, 5), 4, 0.6)
+			boil(mark(stage, base, base + Vector2.new(6, -12), 3, COLORS.Leaf, 5), 4, 0.6)
+		end
+	end
 end
-animate(function(t)
-	rays.Rotation = (t * 20) % 360
-end)
 
--- Title: each letter drops in, then the word gently waves. PHONE gets a shine.
-type Letter = { inner: Frame, main: TextLabel, shine: UIGradient?, index: number, delay: number }
+-- Stars that twinkle by wobbling
+for _ = 1, 24 do
+	local pos = Vector2.new(rng:NextNumber(PANEL_X + 30, PANEL_X + PANEL_W - 30), rng:NextNumber(PANEL_Y + 25, 300))
+	if rng:NextNumber() < 0.7 then
+		local s = sparkle(stage, pos, rng:NextNumber(12, 22), if rng:NextNumber() < 0.6 then COLORS.Star else COLORS.White, 2)
+		s.Rotation = rng:NextNumber(-20, 20)
+		boil(s, 14, 1.5)
+	else
+		local d = frame("Dot", stage, UDim2.fromOffset(pos.X, pos.Y), UDim2.fromOffset(5, 5), COLORS.Star)
+		d.AnchorPoint = Vector2.new(0.5, 0.5)
+		d.ZIndex = 2
+		corner(d, ROUND)
+		boil(d, 0, 1)
+	end
+end
 
-local function titleRow(text: string, y: number, height: number, textSize: number, gold: boolean, startDelay: number): (Frame, { Letter })
+-- Moon with craters
+local moonPos = Vector2.new(1080, 118)
+sketch(stage, "Moon", moonPos, Vector2.new(92, 92), COLORS.Moon, ROUND, 2, 4)
+for _, crater in { { -14, -10, 18 }, { 14, 12, 13 }, { 12, -16, 9 } } do
+	sketch(stage, "Crater", moonPos + Vector2.new(crater[1], crater[2]), Vector2.new(crater[3], crater[3]), nil, ROUND, 2, 2)
+end
+
+-- City skyline standing on the horizon, with a few lit windows
+do
+	local r = Random.new(29)
+	local x = PANEL_X + 18
+	while x < PANEL_X + PANEL_W - 90 do
+		local w = r:NextNumber(70, 128)
+		local h = r:NextNumber(90, 220)
+		local cxB = x + w / 2
+		local b = sketch(stage, "Building", Vector2.new(cxB, GROUND_Y - h / 2), Vector2.new(w, h), COLORS.Building, UDim.new(0, 3), 2, 3.5)
+		b.root.ZIndex = 2
+		local cols = if w > 100 then 3 else 2
+		local rows = math.floor((h - 24) / 30)
+		for row = 0, rows - 1 do
+			for col = 0, cols - 1 do
+				if r:NextNumber() < 0.4 then
+					local wx = x + (col + 0.5) * (w / cols)
+					local wy = GROUND_Y - h + 22 + row * 30
+					local win = frame("Window", stage, UDim2.fromOffset(wx, wy), UDim2.fromOffset(12, 14), COLORS.Window)
+					win.AnchorPoint = Vector2.new(0.5, 0.5)
+					win.Rotation = r:NextNumber(-5, 5)
+					win.ZIndex = 2
+					stroke(win, COLORS.Ink, 2, true)
+					boil(win, 3, 0.6)
+				end
+			end
+		end
+		if r:NextNumber() < 0.3 then
+			local top = Vector2.new(cxB + r:NextNumber(-w / 4, w / 4), GROUND_Y - h)
+			boil(mark(stage, top, top + Vector2.new(r:NextNumber(-3, 3), -28), 3, COLORS.Ink, 2), 3, 0.6)
+		end
+		x += w + r:NextNumber(8, 26)
+	end
+end
+
+-- Title, lettered by hand: each letter sits a little crooked and wobbles.
+type Letter = { scale: UIScale, delay: number }
+local function titleRow(text: string, y: number, height: number, textSize: number, fillColor: Color3, shadowColor: Color3, depth: number, outline: number, startDelay: number, seed: number): { Letter }
+	local r = Random.new(seed)
 	local row = frame("Title", stage, UDim2.fromOffset(0, y), UDim2.fromOffset(STAGE_W, height))
 	row.ZIndex = 6
 	local layout = Instance.new("UIListLayout")
@@ -438,9 +458,8 @@ local function titleRow(text: string, y: number, height: number, textSize: numbe
 	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	layout.VerticalAlignment = Enum.VerticalAlignment.Center
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Padding = UDim.new(0, -2)
 	layout.Parent = row
-
-	local depth = if gold then 9 else 6
 	local letters: { Letter } = {}
 	for i = 1, #text do
 		local ch = string.sub(text, i, i)
@@ -448,259 +467,210 @@ local function titleRow(text: string, y: number, height: number, textSize: numbe
 		holder.AutomaticSize = Enum.AutomaticSize.X
 		holder.LayoutOrder = i
 		holder.ZIndex = 6
-		local inner = frame("Inner", holder, UDim2.new(), UDim2.fromScale(0, 1))
+		local inner = frame("Inner", holder, UDim2.fromOffset(0, r:NextNumber(-5, 5)), UDim2.fromScale(0, 1))
 		inner.AutomaticSize = Enum.AutomaticSize.X
+		inner.Rotation = r:NextNumber(-6, 6)
 		inner.ZIndex = 6
-		inner.Visible = false
-
-		local function letterLabel(name: string): TextLabel
-			local l = label(name, inner, ch, UDim2.new(), UDim2.fromScale(0, 1), textSize, depth)
-			l.AutomaticSize = Enum.AutomaticSize.X
-			l.ZIndex = 6
-			return l
-		end
-		local shadow = letterLabel("Shadow")
-		shadow.TextColor3 = COLORS.Ink
-		shadow.Position = UDim2.fromOffset(0, depth)
-		local main = letterLabel("Main")
+		local shadow = label("Shadow", inner, ch, UDim2.fromOffset(depth, depth), UDim2.fromScale(0, 1), TITLE_FONT, textSize, outline)
+		shadow.AutomaticSize = Enum.AutomaticSize.X
+		shadow.TextColor3 = shadowColor
+		shadow.ZIndex = 6
+		local main = label("Main", inner, ch, UDim2.new(), UDim2.fromScale(0, 1), TITLE_FONT, textSize, outline)
+		main.AutomaticSize = Enum.AutomaticSize.X
+		main.TextColor3 = fillColor
 		main.ZIndex = 7
-
-		local shineGradient: UIGradient? = nil
-		if gold then
-			gradient(main, COLORS.Gold1, COLORS.Gold2)
-			local shine = Instance.new("TextLabel")
-			shine.Name = "Shine"
-			shine.BackgroundTransparency = 1
-			shine.Size = UDim2.fromScale(1, 1)
-			shine.Font = FONT
-			shine.Text = ch
-			shine.TextSize = textSize
-			shine.TextColor3 = COLORS.White
-			shine.ZIndex = 8
-			shine.Parent = main
-			local g = Instance.new("UIGradient")
-			g.Rotation = 20
-			g.Transparency = NumberSequence.new({
-				NumberSequenceKeypoint.new(0, 1),
-				NumberSequenceKeypoint.new(0.3, 1),
-				NumberSequenceKeypoint.new(0.5, 0.1),
-				NumberSequenceKeypoint.new(0.7, 1),
-				NumberSequenceKeypoint.new(1, 1),
-			})
-			g.Offset = Vector2.new(-2, 0)
-			g.Parent = shine
-			shineGradient = g
-		end
-		table.insert(letters, { inner = inner, main = main, shine = shineGradient, index = i, delay = startDelay + (i - 1) * 0.06 })
+		local s = Instance.new("UIScale")
+		s.Scale = 0
+		s.Parent = inner
+		boil(inner, 1.8, 1.2)
+		table.insert(letters, { scale = s, delay = startDelay + (i - 1) * 0.08 })
 	end
-	return row, letters
+	return letters
 end
-
-local _, topLetters = titleRow(CONFIG.TitleTop, 52, 72, 68, false, 0.1)
-local _, bottomLetters = titleRow(CONFIG.TitleBottom, 116, 132, 130, true, 0.45)
-
-local function animateLetters(letters: { Letter }, gold: boolean)
-	animate(function(t)
-		for _, l in letters do
-			local k = (t - l.delay) / 0.55
-			l.inner.Visible = k >= 0
-			local drop = if k < 1 then -160 * (1 - easeOutBack(clamp01(k))) else 0
-			local wave = math.sin(t * 2.6 - l.index * 0.55)
-			l.inner.Position = UDim2.fromOffset(0, drop + wave * (if gold then 6 else 4))
-			l.inner.Rotation = math.sin(t * 2.6 - l.index * 0.55 + 0.8) * 2.5
-		end
-		if gold then
-			-- One shine band sweeps across the whole word every 3.2 seconds.
-			local first, last = letters[1].main, letters[#letters].main
-			local left = first.AbsolutePosition.X
-			local width = (last.AbsolutePosition.X + last.AbsoluteSize.X) - left
-			local p = (t % 3.2) / 1.3
-			local bandX = left + (-0.3 + 1.6 * p) * width
-			for _, l in letters do
-				local shine = l.shine
-				if shine and l.main.AbsoluteSize.X > 0 then
-					local center = l.main.AbsolutePosition.X + l.main.AbsoluteSize.X / 2
-					shine.Offset = Vector2.new((bandX - center) / l.main.AbsoluteSize.X, 0)
-				end
-			end
-		end
-	end)
+local letters: { Letter } = {}
+for _, l in titleRow(CONFIG.TitleTop, 36, 74, 62, COLORS.White, COLORS.Ink, 4, 4, 0.1, 3) do
+	table.insert(letters, l)
 end
-animateLetters(topLetters, false)
-animateLetters(bottomLetters, true)
+for _, l in titleRow(CONFIG.TitleBottom, 92, 134, 118, COLORS.Yellow, COLORS.Pink, 7, 5, 0.6, 4) do
+	table.insert(letters, l)
+end
 
 -- Dirt mound, stem and leaves
-local mound = frame("Mound", stage, UDim2.fromOffset(CX, MOUND_Y), UDim2.fromOffset(300, 58), COLORS.White)
-mound.AnchorPoint = Vector2.new(0.5, 0.5)
-mound.ZIndex = 4
-round(mound)
-gradient(mound, Color3.fromRGB(132, 86, 54), COLORS.DirtBottom)
-stroke(mound, COLORS.Ink, 4, true)
-for _, s in { { 0.22, 0.45, 18 }, { 0.4, 0.7, 12 }, { 0.62, 0.4, 16 }, { 0.8, 0.62, 12 }, { 0.5, 0.3, 10 } } do
-	local speck = frame("Speck", mound, UDim2.fromScale(s[1], s[2]), UDim2.fromOffset(s[3], s[3] * 0.6), COLORS.Speck, 0.3)
-	speck.AnchorPoint = Vector2.new(0.5, 0.5)
-	speck.ZIndex = 4
-	round(speck)
+local mound = sketch(stage, "Mound", Vector2.new(CX, MOUND_Y), Vector2.new(280, 62), COLORS.Mound, ROUND, 7, 4)
+for _, dash in { { -80, -4, -60, -8 }, { -24, 12, -4, 10 }, { 40, -6, 62, -10 }, { 86, 10, 104, 6 } } do
+	boil(mark(mound.root, Vector2.new(140 + dash[1], 31 + dash[2]), Vector2.new(140 + dash[3], 31 + dash[4]), 3, COLORS.GroundHatch, 7), 3, 0.5)
 end
 local moundScale = Instance.new("UIScale")
 moundScale.Scale = 0
-moundScale.Parent = mound
-animate(function(t)
-	moundScale.Scale = easeOutBack(clamp01((t - 0.35) / 0.45))
-end)
+moundScale.Parent = mound.root
 
-local stem = frame("Stem", stage, UDim2.fromOffset(CX, MOUND_Y - 14), UDim2.fromOffset(12, 0), COLORS.Leaf)
+local stem = frame("Stem", stage, UDim2.fromOffset(CX, MOUND_Y - 12), UDim2.fromOffset(10, 0), COLORS.Leaf)
 stem.AnchorPoint = Vector2.new(0.5, 1)
-stem.ZIndex = 3
-corner(stem, UDim.new(0, 6))
+stem.ZIndex = 6
+corner(stem, UDim.new(0, 5))
 stroke(stem, COLORS.Ink, 3, true)
 
 local leaves: { UIScale } = {}
-for _, leafInfo in { { CX - 26, 462, -28 }, { CX + 26, 452, 24 } } do
-	local leaf = frame("Leaf", stage, UDim2.fromOffset(leafInfo[1], leafInfo[2]), UDim2.fromOffset(46, 20), COLORS.White)
-	leaf.AnchorPoint = Vector2.new(0.5, 0.5)
-	leaf.Rotation = leafInfo[3]
-	leaf.ZIndex = 3
-	round(leaf)
-	gradient(leaf, COLORS.Leaf, COLORS.LeafDark)
-	stroke(leaf, COLORS.Ink, 3, true)
+for _, info in { { CX - 24, 484, -28 }, { CX + 24, 478, 24 } } do
+	local leaf = sketch(stage, "Leaf", Vector2.new(info[1], info[2]), Vector2.new(40, 18), COLORS.Leaf, ROUND, 6, 3)
+	leaf.root.Rotation = info[3]
 	local s = Instance.new("UIScale")
 	s.Scale = 0
-	s.Parent = leaf
+	s.Parent = leaf.root
 	table.insert(leaves, s)
 end
 
--- The phone that grows. It looks like the phone in the game's logo.
-local phone = frame("Phone", stage, UDim2.fromOffset(CX, PHONE_BOTTOM), UDim2.fromOffset(PHONE_W, PHONE_H), COLORS.Bezel)
+-- The phone, drawn like the one in the game's logo
+local phone = frame("Phone", stage, UDim2.fromOffset(CX, PHONE_BOTTOM), UDim2.fromOffset(PHONE_W, PHONE_H))
 phone.AnchorPoint = Vector2.new(0.5, 1)
-phone.ZIndex = 5
+phone.ZIndex = 8
 phone.Visible = false
-corner(phone, UDim.new(0, 24))
-stroke(phone, COLORS.Ink, 5, true)
 local phoneScale = Instance.new("UIScale")
 phoneScale.Parent = phone
-
-local screen = frame("Screen", phone, UDim2.fromOffset(8, 8), UDim2.new(1, -16, 1, -16), COLORS.White)
-screen.ZIndex = 5
-corner(screen, UDim.new(0, 16))
-local screenGradient = gradient(screen, COLORS.ScreenOff1, COLORS.ScreenOff2)
-local notch = frame("Notch", screen, UDim2.new(0.5, 0, 0, 6), UDim2.fromOffset(34, 8), COLORS.Ink)
-notch.AnchorPoint = Vector2.new(0.5, 0)
-notch.ZIndex = 5
-corner(notch, UDim.new(0, 4))
-local homeBar = frame("HomeBar", screen, UDim2.new(0.5, 0, 1, -7), UDim2.fromOffset(32, 4), COLORS.White, 0.4)
-homeBar.AnchorPoint = Vector2.new(0.5, 1)
-homeBar.ZIndex = 5
-corner(homeBar, UDim.new(0, 2))
-local screenText = label("Percent", screen, "0%", UDim2.new(0, 0, 0.5, -16), UDim2.new(1, 0, 0, 32), 28, 3)
-screenText.ZIndex = 6
-local screenFlash = frame("Flash", screen, UDim2.new(), UDim2.fromScale(1, 1), COLORS.White, 1)
-screenFlash.ZIndex = 7
-corner(screenFlash, UDim.new(0, 16))
-
--- Battery-style progress bar
-local battery = frame("Battery", stage, UDim2.fromOffset(CX, BAR_Y), UDim2.fromOffset(BAR_W, BAR_H), COLORS.Track)
-battery.AnchorPoint = Vector2.new(0.5, 0.5)
-battery.ZIndex = 6
-corner(battery, UDim.new(0, 16))
-stroke(battery, COLORS.Ink, 4, true)
-local batteryScale = Instance.new("UIScale")
-batteryScale.Parent = battery
-local cap = frame("Cap", battery, UDim2.new(1, 5, 0.5, 0), UDim2.fromOffset(12, 22), COLORS.Track)
-cap.AnchorPoint = Vector2.new(0, 0.5)
-cap.ZIndex = 6
-corner(cap, UDim.new(0, 4))
-stroke(cap, COLORS.Ink, 4, true)
-
-local fill = frame("Fill", battery, UDim2.fromOffset(5, 5), UDim2.fromOffset(36, BAR_H - 10), COLORS.White)
-fill.ZIndex = 6
-fill.ClipsDescendants = true
-corner(fill, UDim.new(0, 12))
-local fillGradient = gradient(fill, COLORS.Low, COLORS.Low)
-local stripes = frame("Stripes", fill, UDim2.new(), UDim2.fromScale(1, 1))
-stripes.ZIndex = 6
-for i = -1, 18 do
-	local stripe = frame("Stripe", stripes, UDim2.fromOffset(i * 34, -20), UDim2.fromOffset(14, 80), COLORS.White, 0.82)
-	stripe.Rotation = 25
-	stripe.ZIndex = 6
+sketch(phone, "Body", Vector2.new(PHONE_W / 2, PHONE_H / 2), Vector2.new(PHONE_W, PHONE_H), COLORS.PhoneWhite, UDim.new(0, 22), 8, 5)
+local screen = sketch(phone, "Screen", Vector2.new(PHONE_W / 2, PHONE_H / 2), Vector2.new(84, 152), COLORS.ScreenOff, UDim.new(0, 14), 8, 2.5)
+local screenFill = screen.fill :: Frame
+local notch = frame("Notch", phone, UDim2.fromOffset(PHONE_W / 2, 21), UDim2.fromOffset(30, 7), COLORS.Ink)
+notch.AnchorPoint = Vector2.new(0.5, 0.5)
+notch.ZIndex = 8
+corner(notch, ROUND)
+local screenText = label("Percent", phone, "0%", UDim2.fromOffset(0, PHONE_H / 2 - 18), UDim2.fromOffset(PHONE_W, 36), HAND_FONT, 32, 2.5)
+screenText.ZIndex = 9
+local shineMarks: { Frame } = {
+	mark(phone, Vector2.new(22, 50), Vector2.new(36, 36), 4, COLORS.White, 9),
+	mark(phone, Vector2.new(22, 66), Vector2.new(48, 40), 4, COLORS.White, 9),
+}
+for _, m in shineMarks do
+	m.BackgroundTransparency = 1
 end
-local bolt = label("Bolt", battery, "⚡", UDim2.fromOffset(10, 0), UDim2.new(0, 34, 1, 0), 26)
-bolt.ZIndex = 7
-local percent = label("Percent", battery, "0%", UDim2.new(), UDim2.fromScale(1, 1), 26, 3)
-percent.ZIndex = 7
+local screenFlash = frame("Flash", phone, UDim2.fromOffset(PHONE_W / 2, PHONE_H / 2), UDim2.fromOffset(84, 152), COLORS.White, 1)
+screenFlash.AnchorPoint = Vector2.new(0.5, 0.5)
+screenFlash.ZIndex = 9
+corner(screenFlash, UDim.new(0, 14))
 
-local status = label("Status", stage, CONFIG.Statuses[1].Text, UDim2.fromOffset(CX, STATUS_Y), UDim2.fromOffset(1000, 36), 32, 3)
+-- Doodled "shine" dashes around the phone when it's ready
+local shine = frame("Shine", stage, UDim2.fromOffset(CX, PHONE_CY), UDim2.fromOffset(0, 0))
+shine.ZIndex = 5
+local shineScale = Instance.new("UIScale")
+shineScale.Scale = 0
+shineScale.Parent = shine
+for i = 0, 9 do
+	local angle = i / 10 * math.pi * 2 + 0.2
+	local dir = Vector2.new(math.cos(angle), math.sin(angle) * 1.25)
+	boil(mark(shine, dir * 108, dir * 138, 6, COLORS.Star, 5), 6, 1.5)
+end
+
+-- A note with an arrow pointing at the phone
+local note = label("Note", stage, CONFIG.PhoneNote, UDim2.fromOffset(402, 322), UDim2.fromOffset(200, 40), HAND_FONT, 32, 2.5)
+note.AnchorPoint = Vector2.new(0.5, 0.5)
+note.Rotation = -8
+note.TextColor3 = COLORS.Note
+note.ZIndex = 7
+boil(note, 1.5, 1)
+local arrow = frame("Arrow", stage, UDim2.new(), UDim2.fromScale(1, 1))
+arrow.ZIndex = 7
+do
+	local tail, tip = Vector2.new(470, 338), Vector2.new(554, 368)
+	local back = (tail - tip).Unit
+	local function rotate(v: Vector2, deg: number): Vector2
+		local a = math.rad(deg)
+		return Vector2.new(v.X * math.cos(a) - v.Y * math.sin(a), v.X * math.sin(a) + v.Y * math.cos(a))
+	end
+	boil(mark(arrow, tail, tip, 4, COLORS.Note, 7), 1.5, 1)
+	boil(mark(arrow, tip, tip + rotate(back, 32) * 18, 4, COLORS.Note, 7), 3, 1)
+	boil(mark(arrow, tip, tip + rotate(back, -32) * 18, 4, COLORS.Note, 7), 3, 1)
+end
+local noteScale = Instance.new("UIScale")
+noteScale.Scale = 0
+noteScale.Parent = note
+local arrowMarks = arrow:GetChildren()
+
+-- The battery, coloured in with a marker as it charges
+local battery = sketch(stage, "Battery", Vector2.new(BAR_X, BAR_Y), Vector2.new(BAR_W, BAR_H), COLORS.BoxPaper, UDim.new(0, 12), 7, 4)
+local batteryScale = Instance.new("UIScale")
+batteryScale.Parent = battery.root
+local cap = sketch(battery.root, "Cap", Vector2.new(BAR_W + 14, BAR_H / 2), Vector2.new(14, 26), COLORS.BoxPaper, UDim.new(0, 4), 7, 4)
+cap.root.ZIndex = 7
+local fillArea = frame("Marker", battery.root, UDim2.fromOffset(6, 6), UDim2.fromOffset(BAR_W - 12, BAR_H - 12))
+fillArea.ClipsDescendants = true
+fillArea.ZIndex = 7
+local markerStrokes = hatch(fillArea, BAR_W - 12, BAR_H - 12, COLORS.Marker, 0.12, 7, 9, 62, 6, 7)
+for _, m in markerStrokes do
+	m.obj.Visible = false
+end
+local percent = label("Percent", battery.root, "0%", UDim2.new(1, 34, 0.5, 0), UDim2.fromOffset(120, 44), HAND_FONT, 38, 3)
+percent.AnchorPoint = Vector2.new(0, 0.5)
+percent.TextXAlignment = Enum.TextXAlignment.Left
+percent.ZIndex = 8
+
+local status = label("Status", stage, CONFIG.Statuses[1].Text, UDim2.fromOffset(CX, STATUS_Y), UDim2.fromOffset(900, 44), HAND_FONT, 40, 3)
 status.AnchorPoint = Vector2.new(0.5, 0.5)
-status.ZIndex = 6
+status.ZIndex = 7
 local statusStroke = status:FindFirstChildOfClass("UIStroke") :: UIStroke
+boil(status, 0.8, 0.8)
 
--- Rotating tips at the bottom
-local tipRow = frame("Tip", stage, UDim2.fromOffset(0, TIP_Y - 15), UDim2.fromOffset(STAGE_W, 30))
-tipRow.ZIndex = 6
-local tipLayout = Instance.new("UIListLayout")
-tipLayout.FillDirection = Enum.FillDirection.Horizontal
-tipLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-tipLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-tipLayout.Padding = UDim.new(0, 10)
-tipLayout.SortOrder = Enum.SortOrder.LayoutOrder
-tipLayout.Parent = tipRow
-local tipPill = frame("Pill", tipRow, UDim2.new(), UDim2.fromOffset(52, 26), COLORS.Gold2)
-tipPill.ZIndex = 6
-corner(tipPill, UDim.new(0, 8))
-stroke(tipPill, COLORS.Ink, 3, true)
-local tipPillText = label("Label", tipPill, "TIP", UDim2.new(), UDim2.fromScale(1, 1), 20)
-tipPillText.TextColor3 = COLORS.Ink
-tipPillText.ZIndex = 6
-local tipText = label("Text", tipRow, CONFIG.Tips[1] or "", UDim2.new(), UDim2.fromOffset(0, 30), 22, 2.5)
-tipText.AutomaticSize = Enum.AutomaticSize.X
-tipText.ZIndex = 6
-tipText.LayoutOrder = 2
-local tipStroke = tipText:FindFirstChildOfClass("UIStroke") :: UIStroke
+-- Tips on a sticky note
+local sticky = frame("StickyNote", stage, UDim2.fromOffset(1090, 606), UDim2.fromOffset(250, 112))
+sticky.AnchorPoint = Vector2.new(0.5, 0.5)
+sticky.Rotation = -4
+sticky.ZIndex = 9
+frame("Shadow", sticky, UDim2.fromOffset(6, 7), UDim2.fromScale(1, 1), COLORS.Ink, 0.72).ZIndex = 9
+local notePaper = frame("Paper", sticky, UDim2.new(), UDim2.fromScale(1, 1), COLORS.Note)
+notePaper.ZIndex = 9
+stroke(notePaper, COLORS.Ink, 2, true)
+local tape = frame("Tape", sticky, UDim2.new(0.5, 0, 0, 0), UDim2.fromOffset(86, 24), COLORS.White, 0.35)
+tape.AnchorPoint = Vector2.new(0.5, 0.5)
+tape.Rotation = 5
+tape.ZIndex = 10
+local tipText = label("Tip", sticky, "", UDim2.fromOffset(16, 20), UDim2.fromOffset(220, 84), HAND_FONT, 24)
+tipText.TextColor3 = COLORS.Ink
+tipText.TextWrapped = true
+tipText.TextXAlignment = Enum.TextXAlignment.Left
+tipText.TextYAlignment = Enum.TextYAlignment.Top
+tipText.ZIndex = 10
+boil(sticky, 0.6, 0.6)
 
--- PLAY button, shown at 100%
+local function showTip(text: string)
+	tipText.Text = "TIP: " .. text
+end
+showTip(CONFIG.Tips[1] or "")
+
+-- PLAY button, drawn on like a sticker
 local playButton = Instance.new("TextButton")
 playButton.Name = "Play"
 playButton.AutoButtonColor = false
 playButton.Text = ""
+playButton.BackgroundTransparency = 1
 playButton.AnchorPoint = Vector2.new(0.5, 0.5)
 playButton.Position = UDim2.fromOffset(CX, BAR_Y)
-playButton.Size = UDim2.fromOffset(300, 78)
-playButton.BackgroundColor3 = COLORS.White
-playButton.ZIndex = 8
+playButton.Size = UDim2.fromOffset(260, 80)
+playButton.ZIndex = 10
 playButton.Visible = false
 playButton.Parent = stage
-corner(playButton, UDim.new(0, 22))
-gradient(playButton, COLORS.Play1, COLORS.Play2)
-stroke(playButton, COLORS.Ink, 5, true)
-local playShine = frame("Shine", playButton, UDim2.fromOffset(5, 5), UDim2.new(1, -10, 1, -10))
-playShine.ZIndex = 8
-corner(playShine, UDim.new(0, 18))
-local shineStroke = stroke(playShine, COLORS.White, 2, true)
-shineStroke.Transparency = 0.45
-local playText = label("Label", playButton, "PLAY", UDim2.new(), UDim2.fromScale(1, 1), 50, 5)
-playText.ZIndex = 9
+sketch(playButton, "Body", Vector2.new(130, 40), Vector2.new(260, 80), COLORS.PlayGreen, UDim.new(0, 22), 10, 5)
+local playText = label("Label", playButton, "PLAY!", UDim2.new(), UDim2.fromScale(1, 1), TITLE_FONT, 46, 4)
+playText.ZIndex = 11
 local playScale = Instance.new("UIScale")
 playScale.Scale = 0
 playScale.Parent = playButton
 
--- SKIP button in the corner for slow connections
+-- skip, scribbled in the corner for slow connections
 local skipButton = Instance.new("TextButton")
 skipButton.Name = "Skip"
 skipButton.AutoButtonColor = false
-skipButton.AnchorPoint = Vector2.new(1, 1)
-skipButton.Position = UDim2.new(1, -24, 1, -24)
-skipButton.Size = UDim2.fromOffset(110, 42)
-skipButton.BackgroundColor3 = COLORS.Ink
 skipButton.BackgroundTransparency = 1
-skipButton.Font = FONT
-skipButton.Text = "SKIP  ›"
-skipButton.TextSize = 22
+skipButton.AnchorPoint = Vector2.new(0.5, 0.5)
+skipButton.Position = UDim2.fromOffset(122, 664)
+skipButton.Size = UDim2.fromOffset(150, 40)
+skipButton.Font = HAND_FONT
+skipButton.Text = "skip >>"
+skipButton.TextSize = 32
 skipButton.TextColor3 = COLORS.White
-skipButton.TextTransparency = 1
-skipButton.ZIndex = 20
+skipButton.ZIndex = 12
 skipButton.Visible = false
-skipButton.Parent = gui
-corner(skipButton, UDim.new(0, 21))
+skipButton.Parent = stage
+stroke(skipButton, COLORS.Ink, 2.5)
+boil(mark(skipButton, Vector2.new(30, 36), Vector2.new(120, 34), 3, COLORS.White, 12), 1, 0.6)
 
 local function fit()
 	local size = gui.AbsoluteSize
@@ -820,17 +790,14 @@ local function setStatus(text: string)
 end
 
 local function burst()
-	for i = 1, 12 do
-		local angle = (i / 12) * math.pi * 2
-		local spark = frame("Spark", stage, UDim2.fromOffset(CX, PHONE_CY), UDim2.fromOffset(12, 12), if i % 2 == 0 then COLORS.Gold1 else COLORS.White)
-		spark.AnchorPoint = Vector2.new(0.5, 0.5)
-		spark.ZIndex = 7
-		round(spark)
-		local distance = 170 + (i % 3) * 30
+	for i = 1, 10 do
+		local angle = (i / 10) * math.pi * 2
+		local spark = sparkle(stage, Vector2.new(CX, PHONE_CY), 22, if i % 2 == 0 then COLORS.Star else COLORS.White, 9)
+		local distance = 180 + (i % 3) * 30
 		tween(spark, 0.7, {
 			Position = UDim2.fromOffset(CX + math.cos(angle) * distance, PHONE_CY + math.sin(angle) * distance),
-			BackgroundTransparency = 1,
-			Size = UDim2.fromOffset(4, 4),
+			Rotation = 90,
+			Size = UDim2.fromOffset(6, 6),
 		}).Completed:Once(function()
 			spark:Destroy()
 		end)
@@ -840,13 +807,14 @@ end
 local function onReady(t: number)
 	readyAt = t
 	setStatus(CONFIG.ReadyText)
-	screenText.Text = "READY"
-	screenGradient.Color = ColorSequence.new(COLORS.ScreenOn1, COLORS.ScreenOn2)
+	note.Text = CONFIG.ReadyNote
+	screenText.Text = "100%"
+	screenFill.BackgroundColor3 = COLORS.ScreenOn
+	for _, m in shineMarks do
+		m.BackgroundTransparency = 0
+	end
 	screenFlash.BackgroundTransparency = 0
 	tween(screenFlash, 0.6, { BackgroundTransparency = 1 })
-	for _, bar in rayBars do
-		tween(bar, 0.6, { BackgroundTransparency = 0 })
-	end
 	burst()
 	playOnce(CONFIG.ReadySound)
 	if CONFIG.ShowPlayButton then
@@ -859,11 +827,10 @@ local function finish()
 		loop:Disconnect()
 	end
 	-- A full-screen flash in the phone screen's colour, which then fades away.
-	local flash = frame("Flash", gui, UDim2.new(), UDim2.fromScale(1, 1), COLORS.ScreenOn2:Lerp(COLORS.ScreenOn1, 0.5))
+	local flash = frame("Flash", gui, UDim2.new(), UDim2.fromScale(1, 1), COLORS.ScreenOn)
 	flash.ZIndex = 50
-	background:Destroy()
+	paper:Destroy()
 	stage:Destroy()
-	skipButton:Destroy()
 	for _, coreType in hiddenCoreGui do
 		pcall(function()
 			StarterGui:SetCoreGuiEnabled(coreType, true)
@@ -884,11 +851,14 @@ local function startExit(t: number)
 	phone.AnchorPoint = Vector2.new(0.5, 0.5)
 	phone.Position = UDim2.fromOffset(CX, PHONE_CY)
 	phone.ZIndex = 30
-	-- Clear the screen so the zoom flies into plain glowing glass.
+	-- Clear the screen so the zoom flies into plain blue.
+	screenFill.BackgroundColor3 = COLORS.ScreenOn
 	tween(screenText, 0.15, { TextTransparency = 1 })
 	tween(screenText:FindFirstChildOfClass("UIStroke") :: UIStroke, 0.15, { Transparency = 1 })
 	tween(notch, 0.15, { BackgroundTransparency = 1 })
-	tween(homeBar, 0.15, { BackgroundTransparency = 1 })
+	for _, m in shineMarks do
+		tween(m, 0.15, { BackgroundTransparency = 1 })
+	end
 	if music then
 		tween(music, 0.8, { Volume = 0 })
 	end
@@ -926,15 +896,25 @@ loop = RunService.RenderStepped:Connect(function(dt: number)
 	end
 	local p = shown
 
-	for _, fn in animators do
-		fn(t, dt)
+	updateBoil(t)
+	for _, l in letters do
+		l.scale.Scale = easeOutBack(clamp01((t - l.delay) / 0.35))
 	end
+	moundScale.Scale = easeOutBack(clamp01((t - 0.3) / 0.4))
 
 	-- Stem, leaves and phone grow with the progress.
-	stem.Size = UDim2.fromOffset(12, 60 * clamp01(p / 0.22))
+	stem.Size = UDim2.fromOffset(10, 30 * clamp01(p / 0.22))
 	for i, leaf in leaves do
 		leaf.Scale = easeOutBack(clamp01((p - 0.1 - i * 0.04) / 0.12))
 	end
+	local noteK = easeOutBack(clamp01((p - 0.24) / 0.1))
+	noteScale.Scale = noteK
+	for _, m in arrowMarks do
+		if m:IsA("Frame") then
+			m.Visible = noteK > 0.05
+		end
+	end
+
 	local exitTime = exitAt
 	if exitTime then
 		local k = clamp01((t - exitTime) / 0.7)
@@ -945,27 +925,26 @@ loop = RunService.RenderStepped:Connect(function(dt: number)
 			return
 		end
 	else
-		local growth = clamp01((p - 0.22) / 0.7)
 		phone.Visible = p >= 0.22
 		local ready = readyAt
 		if ready then
 			phoneScale.Scale = 1
-			phone.Rotation = 0
+			phone.Rotation = math.sin((t - ready) * 3) * 2
 			phone.Position = UDim2.fromOffset(CX, PHONE_BOTTOM + math.sin((t - ready) * 2.2) * 5)
 		else
-			phoneScale.Scale = 0.12 + 0.88 * easeOutCubic(growth)
+			phoneScale.Scale = 0.12 + 0.88 * easeOutCubic(clamp01((p - 0.22) / 0.7))
 			phone.Rotation = math.sin(t * 2.4) * 5
 			screenText.Text = `{math.floor(p * 100)}%`
 		end
 	end
 
-	-- Battery fill: red, then yellow, then green as it charges.
-	local color = if p < 0.5 then COLORS.Low:Lerp(COLORS.Mid, p / 0.5) else COLORS.Mid:Lerp(COLORS.High, (p - 0.5) / 0.5)
-	fillGradient.Color = ColorSequence.new(color:Lerp(COLORS.White, 0.25), color)
-	fill.Size = UDim2.fromOffset(math.max(BAR_H - 10, p * (BAR_W - 10)), BAR_H - 10)
-	stripes.Position = UDim2.fromOffset(-((t * 40) % 34), 0)
+	-- Colour the battery in, one marker stroke at a time.
+	local filled = p * (BAR_W - 12) + 4
+	for _, m in markerStrokes do
+		m.obj.Visible = m.x <= filled
+	end
 	percent.Text = `{math.floor(p * 100)}%`
-	batteryScale.Scale = easeOutBack(clamp01((t - 0.5) / 0.5))
+	batteryScale.Scale = easeOutBack(clamp01((t - 0.5) / 0.45))
 
 	if not readyAt then
 		for i = #CONFIG.Statuses, 1, -1 do
@@ -983,29 +962,28 @@ loop = RunService.RenderStepped:Connect(function(dt: number)
 	if ready then
 		local since = t - ready
 		batteryScale.Scale = 1 - easeInBack(clamp01(since / 0.25))
-		battery.Visible = since < 0.25
+		battery.root.Visible = since < 0.25
+		shineScale.Scale = easeOutBack(clamp01(since / 0.4))
 		hoverScale += (hoverTarget - hoverScale) * math.min(1, dt * 14)
-		playScale.Scale = easeOutBack(clamp01((since - 0.25) / 0.4)) * hoverScale * (1 + 0.035 * math.sin(t * 5))
+		playScale.Scale = easeOutBack(clamp01((since - 0.25) / 0.4)) * hoverScale
+		playButton.Rotation = math.sin(t * 3) * 2
 		if not CONFIG.ShowPlayButton and since > 0.9 then
 			startExit(t)
 		end
 	end
 
-	-- Tips take turns.
+	-- Tips take turns on the sticky note.
 	if #CONFIG.Tips > 1 and t >= nextTipAt then
 		nextTipAt = t + CONFIG.TipTime
 		tipIndex = tipIndex % #CONFIG.Tips + 1
-		tipText.Text = CONFIG.Tips[tipIndex]
+		showTip(CONFIG.Tips[tipIndex])
 		tipText.TextTransparency = 1
-		tipStroke.Transparency = 1
 		tween(tipText, 0.3, { TextTransparency = 0 })
-		tween(tipStroke, 0.3, { Transparency = 0 })
 	end
 
-	-- SKIP shows up if loading drags on.
+	-- skip shows up if loading drags on.
 	if CONFIG.SkipAfter > 0 and t >= CONFIG.SkipAfter and not skipButton.Visible and not exitAt then
 		skipButton.Visible = true
-		tween(skipButton, 0.4, { BackgroundTransparency = 0.35, TextTransparency = 0 })
 	end
 end)
 ]]></string>
