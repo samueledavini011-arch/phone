@@ -19,8 +19,9 @@ return {
 		Plants = true, -- potted plants by the front corners
 		StringLights = true, -- warm bulbs hanging from the roof edge
 		Ticker = "NEW PHONES EVERY DAY  *  BEST PRICES IN TOWN  *  COME ON IN  *", -- scrolling LED text on the roof edge
-		Poster = { "NEW PHONES", "Fresh from the farm every day", "HOT" }, -- the lit posters on both sides
+		Poster = { "NEW PHONES", "Fresh from the farm every day", "HOT" }, -- the painted signs on both sides
 		Board = { "OPEN", "Phones in stock", "Come on in!" }, -- the chalkboard out front
+		Card = { "FRESH!", "picked today" }, -- the cardboard sign on the counter
 
 		-- Who the shopkeeper looks like: false keeps their own look, "me" is
 		-- your Roblox avatar, or a UserId (the number in a profile link).
@@ -40,6 +41,7 @@ return {
 		Ticker = "WE BUY PHONES  *  INSTANT CASH  *  ANY PHONE, ANY SIZE  *",
 		Poster = { "CASH FOR PHONES", "Any phone, paid on the spot", "FAST" },
 		Board = { "OPEN", "We buy phones", "Come on in!" },
+		Card = { "CASH $$", "fair prices!" },
 		Shopkeeper = false,
 		ShopkeeperMoves = true,
 	},

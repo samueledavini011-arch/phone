@@ -225,16 +225,28 @@ local function drawGui(part: BasePart, g: StallGeometry.Gui, face: Enum.NormalId
 		local l = label(gui, g.text, SIGN_FONT, accent:Lerp(white, 0.55), 0.18, 0.2, 0.64, 0.6)
 		make("UIStroke", { Color = accent, Thickness = 3, Transparency = 0.3 }, l)
 	elseif g.kind == "menu" then
-		local gui = surface(part, face, 240, 1.3)
-		local bg = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0 }, gui)
-		make("UIGradient", { Color = ColorSequence.new(Color3.fromRGB(26, 26, 32), Color3.fromRGB(10, 10, 12)), Rotation = 90 }, bg)
+		-- chalk lettering on the slate board
+		local gui = surface(part, face, 240, 1)
+		local chalk = Color3.fromRGB(240, 238, 228)
+		local tint = accent:Lerp(white, 0.45)
 		local lines = g.lines
-		local head = label(gui, lines[1] or "", SIGN_FONT, accent, 0.06, 0.08, 0.88, 0.3, Enum.TextXAlignment.Left)
-		make("UIStroke", { Color = accent, Thickness = 2, Transparency = 0.7 }, head)
-		make("Frame", { Position = UDim2.new(0.06, 0, 0.43, 0), Size = UDim2.new(0.88, 0, 0, 3), BackgroundColor3 = accent, BorderSizePixel = 0 }, gui)
+		local head = label(gui, lines[1] or "", Enum.Font.PermanentMarker, tint, 0.06, 0.05, 0.88, 0.32)
+		head.Rotation = -1.5
+		make("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.42),
+			Size = UDim2.new(0.62, 0, 0, 4),
+			BackgroundColor3 = tint,
+			BackgroundTransparency = 0.3,
+			BorderSizePixel = 0,
+			Rotation = 1,
+		}, gui)
 		for i = 2, math.min(#lines, 3) do
-			local color = if i == #lines then accent:Lerp(white, 0.5) else white
-			label(gui, lines[i], TEXT_FONT, color, 0.06, 0.52 + (i - 2) * 0.22, 0.88, 0.16, Enum.TextXAlignment.Left)
+			local l = label(gui, lines[i], Enum.Font.PatrickHand, chalk, 0.08, 0.5 + (i - 2) * 0.23, 0.84, 0.19)
+			l.Rotation = if i % 2 == 0 then 0.8 else -0.6
+		end
+		for _, at in { 0.005, 0.925 } do
+			label(gui, "*", Enum.Font.PermanentMarker, tint, at, 0.52, 0.07, 0.16)
 		end
 	elseif g.kind == "icon" then
 		local gui = surface(part, face, 200, 1.8)
@@ -301,26 +313,34 @@ local function drawGui(part: BasePart, g: StallGeometry.Gui, face: Enum.NormalId
 			make("UIStroke", { Color = accent, Thickness = 2, Transparency = 0.6 }, l)
 		end
 	elseif g.kind == "poster" then
-		local gui = surface(part, face, 240, 1.4)
-		local bg = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = white, BorderSizePixel = 0 }, gui)
-		make("UIGradient", { Color = ColorSequence.new(accent:Lerp(Color3.new(0, 0, 0), 0.55), Color3.fromRGB(8, 8, 12)), Rotation = 90 }, bg)
-		make("UIStroke", { Color = accent, Thickness = 4 }, bg)
+		-- painted straight onto the wooden board, so the wood shows through
+		local gui = surface(part, face, 240, 1)
+		gui.LightInfluence = 0.5
+		local paint = accent:Lerp(white, 0.15)
 		local phone = make("Frame", {
-			Position = UDim2.fromScale(0.07, 0.12),
-			Size = UDim2.fromScale(0.25, 0.76),
-			BackgroundColor3 = Color3.fromRGB(18, 18, 24),
+			Position = UDim2.fromScale(0.07, 0.14),
+			Size = UDim2.fromScale(0.24, 0.72),
+			BackgroundTransparency = 1,
+			Rotation = -4,
 		}, gui)
 		make("UICorner", { CornerRadius = UDim.new(0.14, 0) }, phone)
-		make("UIStroke", { Color = accent:Lerp(white, 0.3), Thickness = 3 }, phone)
-		drawIcon(phone, g.icon, 60, accent)
+		make("UIStroke", { Color = paint, Thickness = 7 }, phone)
+		drawIcon(phone, g.icon, 60, paint)
 		local lines = g.lines
-		local head = label(gui, lines[1] or "", SIGN_FONT, accent:Lerp(white, 0.35), 0.38, 0.16, 0.58, 0.34, Enum.TextXAlignment.Left)
-		make("UIStroke", { Color = accent, Thickness = 2, Transparency = 0.5 }, head)
-		label(gui, lines[2] or "", TEXT_FONT, white, 0.38, 0.56, 0.58, 0.13, Enum.TextXAlignment.Left)
+		local head = label(gui, lines[1] or "", Enum.Font.PermanentMarker, paint, 0.36, 0.12, 0.6, 0.38, Enum.TextXAlignment.Left)
+		head.Rotation = -2
+		local sub = label(gui, lines[2] or "", Enum.Font.PatrickHand, Color3.fromRGB(252, 248, 238), 0.37, 0.54, 0.58, 0.17, Enum.TextXAlignment.Left)
+		sub.Rotation = -1
 		if lines[3] then
-			local badge = make("Frame", { Position = UDim2.fromScale(0.38, 0.75), Size = UDim2.fromScale(0.24, 0.13), BackgroundColor3 = accent }, gui)
-			make("UICorner", { CornerRadius = UDim.new(0.5, 0) }, badge)
-			label(badge, lines[3], Enum.Font.GothamBold, Color3.fromRGB(10, 10, 14), 0.1, 0.15, 0.8, 0.7)
+			local blob = make("Frame", {
+				Position = UDim2.fromScale(0.68, 0.7),
+				Size = UDim2.fromScale(0.25, 0.25),
+				SizeConstraint = Enum.SizeConstraint.RelativeYY,
+				BackgroundColor3 = paint,
+				Rotation = 8,
+			}, gui)
+			make("UICorner", { CornerRadius = UDim.new(0.5, 0) }, blob)
+			label(blob, lines[3], Enum.Font.PermanentMarker, Color3.fromRGB(30, 22, 18), 0.1, 0.22, 0.8, 0.56)
 		end
 	elseif g.kind == "board" then
 		local gui = surface(part, face, 250, 1)
@@ -333,8 +353,18 @@ local function drawGui(part: BasePart, g: StallGeometry.Gui, face: Enum.NormalId
 		local chalk = Color3.fromRGB(236, 236, 228)
 		for i, line in g.lines do
 			local first = i == 1
-			label(slate, line, Enum.Font.PermanentMarker, if first then accent:Lerp(white, 0.4) else chalk, 0.06, if first then 0.06 else 0.2 + i * 0.13, 0.88, if first then 0.24 else 0.12)
+			local l = label(slate, line, if first then Enum.Font.PermanentMarker else Enum.Font.PatrickHand, if first then accent:Lerp(white, 0.4) else chalk, 0.06, if first then 0.06 else 0.2 + i * 0.13, 0.88, if first then 0.24 else 0.13)
+			l.Rotation = if first then -3 else (if i % 2 == 0 then 1.5 else -1)
 		end
+	elseif g.kind == "card" then
+		-- marker on cardboard
+		local gui = surface(part, face, 180, 1)
+		gui.LightInfluence = 0.5
+		local ink = accent:Lerp(Color3.new(0, 0, 0), 0.35)
+		local head = label(gui, g.lines[1] or "", Enum.Font.PermanentMarker, ink, 0.06, 0.08, 0.88, 0.5)
+		head.Rotation = -4
+		local sub = label(gui, g.lines[2] or "", Enum.Font.PatrickHand, Color3.fromRGB(46, 34, 26), 0.08, 0.6, 0.84, 0.3)
+		sub.Rotation = -2
 	end
 end
 

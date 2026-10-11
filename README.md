@@ -214,28 +214,35 @@ To rebuild the file after editing the scripts, run
 
 # BUY and SELL stalls
 
-`PhoneStalls.rbxmx` gives the BUY and SELL stalls a new look:
+`PhoneStalls.rbxmx` gives the BUY and SELL stalls a new, hand-made look.
+They keep the neon and the cyan and red colours, but are built like a real
+market stall someone put together by hand. Every board sits a fraction of a
+degree off true and has its own shade of wood.
 
-- A counter with a fluted metal front, a marble top, an underlit edge and
-  a glowing icon panel.
-- A warm wooden back wall with lit shelves of phone boxes (and stacks of
-  cash on the SELL stall), and a menu board above the shopkeeper's head.
-- Things on the counter. BUY gets a display phone turning on a turntable,
-  phones on stands, a shopping bag, a card reader and a service bell. SELL
-  gets a cash register, bundles of cash and a phone being checked on a
-  glowing tray.
-- A big neon sign on the roof that flickers now and then, a scrolling LED
-  ticker along the roof edge, warm string lights, a little OPEN sign, neon
-  lines on the pillars, roof and base, and glass side panels.
-- Lit posters on both sides and a chalkboard A-frame sign out front.
-- A glowing floor circle that pulses, and lights up while you stand on it,
-  with a spinning icon and sparkles floating above it.
-- Potted plants by the corners.
-- Real lights: downlights over the counter, a light in the stall, coloured
-  light from the sign and from under the base.
+- A plank deck, timber posts with corner braces, a plank back wall, and a
+  roof of boards on rafters.
+- A counter of vertical boards held by battens and a cross brace, with a
+  butcher-block top and a lit icon panel in a wooden frame.
+- A big neon sign hung slightly crooked on chains from a timber beam, a
+  scrolling LED ticker, warm string lights, a little OPEN sign, and neon
+  lines on the posts, roof and base.
+- Hand-lettered signs: a chalk menu above the shopkeeper, painted signs on
+  both sides, a chalkboard A-frame out front and a cardboard sign on the
+  counter.
+- Bulbs hanging on cords under little shades, and paper lanterns at the
+  front corners.
+- Rough shelves on brackets with phone boxes and price tags (and stacks of
+  cash on the SELL stall), and a wooden crate of phones on the counter.
+- On the counter, BUY gets a phone on a wooden turntable, phones on stands,
+  a paper bag, a card reader and a service bell. SELL gets a cash register,
+  cash and a phone being checked on a glowing tray.
+- A woven rug, terracotta pots with flowers, and a glowing floor circle
+  that pulses (and lights up while you stand on it), with a spinning icon
+  and sparkles above it.
+- Real lights from the hanging bulbs, lanterns, sign and under the deck.
 - The shopkeepers stand idle and wave when someone walks up.
 
-Each stall is about 190 parts.
+Each stall is about 300 parts.
 
 Your shopkeepers and your buy/sell scripts are not touched. The old stall's
 parts are made invisible but keep working: players can still step on, touch
@@ -284,7 +291,8 @@ To put an old stall back, select it (or its new look) and run
 
 Open **PhoneStalls > StallConfig**. Each stall has its sign text, its neon
 colour, the icon (`bag`, `cash`, `phone`, `none` or an image ID), the menu
-board, ticker, poster and chalkboard words, whether to show the OPEN sign,
+board, ticker, painted sign, chalkboard and cardboard sign words, whether
+to show the OPEN sign,
 plants and string lights, and whether the shopkeeper wears an avatar
 (`false` keeps their own look, `"me"` uses yours, or a UserId). After a
 change, or after putting in a newer `PhoneStalls.rbxmx`, run
