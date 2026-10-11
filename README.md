@@ -233,8 +233,7 @@ To rebuild the file after editing the scripts, run
 - Potted plants by the corners.
 - Real lights: downlights over the counter, a light in the stall, coloured
   light from the sign and from under the base.
-- The shopkeepers wear your Roblox avatar (clothes, hair and hats, face and
-  skin colour), stand idle, and wave when someone walks up.
+- The shopkeepers stand idle and wave when someone walks up.
 
 Each stall is about 190 parts.
 
@@ -267,12 +266,16 @@ scrolls the ticker, makes the floor glow pulse and the neon signs flicker,
 and plays the shopkeepers' idle and wave animations. These only move while
 the game is running.
 
-"me" means the account you're signed in to Studio with. To dress the
-shopkeepers again (after changing your avatar, say), run
-`require(game.ServerStorage.PhoneStalls).DressShopkeepers()`. For someone
-else's avatar, put their UserId in the brackets, or set `Shopkeeper` in
-StallConfig. Only their clothes, hair and hats, face and skin colour are
-copied, so the shopkeeper keeps its own body, position and scripts.
+The shopkeepers keep their own look. If you'd like them to wear your
+Roblox avatar, run `require(game.ServerStorage.PhoneStalls).DressShopkeepers()`
+(or put someone's UserId in the brackets). Only the clothes, hair and hats,
+face and skin colour are copied. The shopkeeper keeps its own body,
+position and scripts, and its own outfit is saved in
+**ServerStorage > PhoneStallsLooks**.
+
+To take the avatar off again and put their own look back, run
+`require(game.ServerStorage.PhoneStalls).UndressShopkeepers()`.
+`Rebuild()` does the same while `Shopkeeper` is `false` in StallConfig.
 
 To put an old stall back, select it (or its new look) and run
 `require(game.ServerStorage.PhoneStalls).Restore()`.
@@ -282,7 +285,8 @@ To put an old stall back, select it (or its new look) and run
 Open **PhoneStalls > StallConfig**. Each stall has its sign text, its neon
 colour, the icon (`bag`, `cash`, `phone`, `none` or an image ID), the menu
 board, ticker, poster and chalkboard words, whether to show the OPEN sign,
-plants and string lights, and who the shopkeeper looks like. After a
+plants and string lights, and whether the shopkeeper wears an avatar
+(`false` keeps their own look, `"me"` uses yours, or a UserId). After a
 change, or after putting in a newer `PhoneStalls.rbxmx`, run
 `require(game.ServerStorage.PhoneStalls).Rebuild()`.
 

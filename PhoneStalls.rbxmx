@@ -25,10 +25,10 @@
 
 	  4. Do the same for the SELL stall.
 
-	The shopkeepers get your Roblox avatar's clothes, hair, face and skin
-	(set Shopkeeper in StallConfig to change that). To dress them again,
-	for example after changing your avatar:
+	The shopkeepers keep their own look. To dress them in your Roblox
+	avatar, or take it off again:
 	    require(game.ServerStorage.PhoneStalls).DressShopkeepers()
+	    require(game.ServerStorage.PhoneStalls).UndressShopkeepers()
 
 	Want the old look back? Select the stall and run:
 	    require(game.ServerStorage.PhoneStalls).Restore()
@@ -37,7 +37,9 @@
 ]]
 
 local CollectionService = game:GetService("CollectionService")
+local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
+local ServerStorage = game:GetService("ServerStorage")
 local StarterPlayer = game:GetService("StarterPlayer")
 
 local StallGeometry = require(script:WaitForChild("StallGeometry"))
@@ -908,18 +910,79 @@ local function wornOn(handle: BasePart): BasePart?
 	return nil
 end
 
--- Puts the avatar's clothes, hair and hats, face and skin colour on the
--- shopkeeper. Its body, position and any scripts stay as they are.
-local function dress(npc: Model, look: Model)
+local function isOutfit(c: Instance): boolean
+	return c:IsA("Accessory") or c:IsA("Clothing") or c:IsA("ShirtGraphic") or c:IsA("BodyColors") or c:IsA("CharacterMesh")
+end
+
+local function colorKey(partName: string): string
+	return "Color_" .. string.gsub(partName, "%W", "_")
+end
+
+local function faceOf(head: BasePart?): Decal?
+	if not head then
+		return nil
+	end
+	for _, d in head:GetChildren() do
+		if d:IsA("Decal") and d.Name == "face" then
+			return d
+		end
+	end
+	return nil
+end
+
+-- The shopkeeper's own outfit, kept in ServerStorage > PhoneStallsLooks
+-- while they wear an avatar, so it can be put back.
+local function savedLook(npc: Model, create: boolean): Folder?
+	local root = ServerStorage:FindFirstChild("PhoneStallsLooks")
+	local id = npc:GetAttribute("PhoneStallsLook")
+	if type(id) == "string" and root then
+		local existing = root:FindFirstChild(id)
+		if existing and existing:IsA("Folder") then
+			return existing
+		end
+	end
+	if not create then
+		return nil
+	end
+	if not root then
+		root = make("Folder", { Name = "PhoneStallsLooks" }, ServerStorage)
+	end
+	local newId = HttpService:GenerateGUID(false)
+	npc:SetAttribute("PhoneStallsLook", newId)
+	local store: Folder = make("Folder", { Name = newId }, root)
+	store:SetAttribute("Shopkeeper", npc:GetFullName())
 	for _, c in npc:GetChildren() do
-		if c:IsA("Accessory") or c:IsA("Clothing") or c:IsA("ShirtGraphic") or c:IsA("BodyColors") or c:IsA("CharacterMesh") then
+		if isOutfit(c) then
+			c.Parent = store
+		elseif c:IsA("BasePart") then
+			store:SetAttribute(colorKey(c.Name), c.Color)
+		end
+	end
+	local face = faceOf(bodyPart(npc, "Head"))
+	if face then
+		face.Parent = make("Folder", { Name = "Face" }, store)
+	end
+	return store
+end
+
+local function markAvatar(inst: Instance): Instance
+	inst:SetAttribute("PhoneStallsAvatar", true)
+	return inst
+end
+
+-- Puts the avatar's clothes, hair and hats, face and skin colour on the
+-- shopkeeper. Its body, position and any scripts stay as they are, and its
+-- own outfit is kept so UndressShopkeepers can put it back.
+local function dress(npc: Model, look: Model)
+	local store = savedLook(npc, true)
+	for _, c in npc:GetChildren() do
+		if isOutfit(c) then
 			c:Destroy()
 		end
 	end
 	for _, c in look:GetChildren() do
 		if c:IsA("Clothing") or c:IsA("ShirtGraphic") or c:IsA("BodyColors") then
-			local copy: Instance = c:Clone()
-			copy.Parent = npc
+			markAvatar(c:Clone()).Parent = npc
 		elseif c:IsA("BasePart") and c.Name ~= "HumanoidRootPart" then
 			local mine = bodyPart(npc, c.Name)
 			if mine then
@@ -929,18 +992,19 @@ local function dress(npc: Model, look: Model)
 	end
 
 	local head, lookHead = bodyPart(npc, "Head"), bodyPart(look, "Head")
-	if head and lookHead then
-		local face = lookHead:FindFirstChild("face")
-		if face and face:IsA("Decal") then
-			for _, old in head:GetChildren() do
-				if old:IsA("Decal") and old.Name == "face" then
-					old:Destroy()
-				end
-			end
-			face:Clone().Parent = head
+	if head then
+		local old = faceOf(head)
+		if old then
+			old:Destroy()
+		end
+		local face = faceOf(lookHead)
+		local ownFace = store and store:FindFirstChild("Face")
+		local fallback = if ownFace then ownFace:FindFirstChildOfClass("Decal") else nil
+		local use = face or fallback
+		if use then
+			markAvatar(use:Clone()).Parent = head
 		end
 	end
-
 	for _, accessory in look:GetChildren() do
 		local handle = if accessory:IsA("Accessory") then accessory:FindFirstChild("Handle") else nil
 		if handle and handle:IsA("BasePart") then
@@ -961,10 +1025,74 @@ local function dress(npc: Model, look: Model)
 				h.CanQuery = false
 				h.Massless = true
 				make("WeldConstraint", { Name = "AccessoryWeld", Part0 = mine, Part1 = h }, h)
-				copy.Parent = npc
+				markAvatar(copy).Parent = npc
 			end
 		end
 	end
+end
+
+local partialUndress = false
+
+-- Takes the avatar off and gives the shopkeeper their own outfit back.
+-- Returns true if there was an avatar to take off. The first PhoneStalls
+-- didn't keep the old outfit; its avatar hats are only recognised on
+-- shopkeepers it already tagged.
+local function undress(npc: Model): boolean
+	local store = savedLook(npc, false)
+	local fromFirstVersion = false
+	local tagged = CollectionService:HasTag(npc, "StallShopkeeper")
+	local worn: { Instance } = if tagged then npc:GetChildren() else {}
+	for _, c in worn do
+		local handle = if c:IsA("Accessory") then c:FindFirstChild("Handle") else nil
+		local weld = if handle then handle:FindFirstChild("AccessoryWeld") else nil
+		if weld and weld:IsA("WeldConstraint") then
+			fromFirstVersion = true
+		end
+	end
+	if not store and not fromFirstVersion and not npc:GetAttribute("PhoneStallsDressed") then
+		return false
+	end
+
+	for _, c in npc:GetChildren() do
+		if isOutfit(c) then
+			c:Destroy()
+		end
+	end
+	local head = bodyPart(npc, "Head")
+	local face = faceOf(head)
+	if face then
+		face:Destroy()
+	end
+
+	if store then
+		for _, c in store:GetChildren() do
+			if c.Name == "Face" and c:IsA("Folder") then
+				local own = c:FindFirstChildOfClass("Decal")
+				if own and head then
+					own.Parent = head
+				end
+			else
+				c.Parent = npc
+			end
+		end
+		for _, part in npc:GetChildren() do
+			if part:IsA("BasePart") then
+				local color = store:GetAttribute(colorKey(part.Name))
+				if typeof(color) == "Color3" then
+					part.Color = color
+				end
+			end
+		end
+		store:Destroy()
+	else
+		partialUndress = true
+		if head then
+			make("Decal", { Name = "face", Face = Enum.NormalId.Front, Texture = "rbxasset://textures/face.png" }, head)
+		end
+	end
+	npc:SetAttribute("PhoneStallsLook", nil)
+	npc:SetAttribute("PhoneStallsDressed", nil)
+	return true
 end
 
 -- Shopkeepers standing inside one of our stalls.
@@ -997,9 +1125,12 @@ local function prepareShopkeepers(npcs: { Instance }, s: Stall): number
 		if not npc:IsA("Model") then
 			continue
 		end
+		if s.Shopkeeper == nil or s.Shopkeeper == false then
+			undress(npc)
+		end
 		npc:SetAttribute("ShopkeeperMoves", s.ShopkeeperMoves ~= false)
 		CollectionService:AddTag(npc, "StallShopkeeper")
-		if s.Shopkeeper == false then
+		if s.Shopkeeper == nil or s.Shopkeeper == false then
 			continue
 		end
 		local userId = resolveUser(s.Shopkeeper)
@@ -1013,6 +1144,7 @@ local function prepareShopkeepers(npcs: { Instance }, s: Stall): number
 			local look, problem = avatarLook(userId, humanoid.RigType)
 			if look then
 				dress(npc, look)
+				npc:SetAttribute("PhoneStallsDressed", true)
 				dressed += 1
 			else
 				warn(`[PhoneStalls] Couldn't load the avatar for user {userId}: {problem}`)
@@ -1162,12 +1294,42 @@ function PhoneStalls.DressShopkeepers(who: any?): number
 		local name = d:GetAttribute("PhoneStall")
 		if d:IsA("Model") and type(name) == "string" then
 			local s: Stall = table.clone(findStall(stalls, name) or {})
-			s.Shopkeeper = if who ~= nil then who elseif s.Shopkeeper == false then "me" else s.Shopkeeper
+			s.Shopkeeper = if who ~= nil then who elseif s.Shopkeeper == false or s.Shopkeeper == nil then "me" else s.Shopkeeper
 			count += prepareShopkeepers(shopkeepersIn(d), s)
 		end
 	end
 	waypoint("PhoneStalls dress")
 	print(`[PhoneStalls] Dressed {count} shopkeeper(s).`)
+	return count
+end
+
+-- Takes the avatar off every shopkeeper and gives them their own look back.
+function PhoneStalls.UndressShopkeepers(): number
+	partialUndress = false
+	local npcs: { Instance } = CollectionService:GetTagged("StallShopkeeper")
+	for _, d in workspace:GetDescendants() do
+		if d:IsA("Model") and type(d:GetAttribute("PhoneStall")) == "string" then
+			for _, npc in shopkeepersIn(d) do
+				table.insert(npcs, npc)
+			end
+		end
+	end
+	waypoint("Before PhoneStalls undress")
+	local seen: { [Instance]: boolean } = {}
+	local count = 0
+	for _, npc in npcs do
+		if npc:IsA("Model") and not seen[npc] then
+			seen[npc] = true
+			if undress(npc) then
+				count += 1
+			end
+		end
+	end
+	waypoint("PhoneStalls undress")
+	print(`[PhoneStalls] Took the avatar off {count} shopkeeper(s).`)
+	if partialUndress then
+		warn("[PhoneStalls] The first version of PhoneStalls didn't keep the shopkeepers' own clothes, so they now have a plain look. If you dressed them in this Studio session, Ctrl+Z gets their old clothes back instead.")
+	end
 	return count
 end
 
@@ -1201,9 +1363,9 @@ return {
 		Poster = { "NEW PHONES", "Fresh from the farm every day", "HOT" }, -- the lit posters on both sides
 		Board = { "OPEN", "Phones in stock", "Come on in!" }, -- the chalkboard out front
 
-		-- Who the shopkeeper looks like: "me" (your Roblox avatar), someone's
-		-- UserId (the number in their profile link), or false to leave them.
-		Shopkeeper = "me",
+		-- Who the shopkeeper looks like: false keeps their own look, "me" is
+		-- your Roblox avatar, or a UserId (the number in a profile link).
+		Shopkeeper = false,
 		ShopkeeperMoves = true, -- idles and waves when someone walks up
 	},
 	{
@@ -1219,7 +1381,7 @@ return {
 		Ticker = "WE BUY PHONES  *  INSTANT CASH  *  ANY PHONE, ANY SIZE  *",
 		Poster = { "CASH FOR PHONES", "Any phone, paid on the spot", "FAST" },
 		Board = { "OPEN", "We buy phones", "Come on in!" },
-		Shopkeeper = "me",
+		Shopkeeper = false,
 		ShopkeeperMoves = true,
 	},
 }

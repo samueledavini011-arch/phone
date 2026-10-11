@@ -22,9 +22,9 @@ return {
 		Poster = { "NEW PHONES", "Fresh from the farm every day", "HOT" }, -- the lit posters on both sides
 		Board = { "OPEN", "Phones in stock", "Come on in!" }, -- the chalkboard out front
 
-		-- Who the shopkeeper looks like: "me" (your Roblox avatar), someone's
-		-- UserId (the number in their profile link), or false to leave them.
-		Shopkeeper = "me",
+		-- Who the shopkeeper looks like: false keeps their own look, "me" is
+		-- your Roblox avatar, or a UserId (the number in a profile link).
+		Shopkeeper = false,
 		ShopkeeperMoves = true, -- idles and waves when someone walks up
 	},
 	{
@@ -40,7 +40,7 @@ return {
 		Ticker = "WE BUY PHONES  *  INSTANT CASH  *  ANY PHONE, ANY SIZE  *",
 		Poster = { "CASH FOR PHONES", "Any phone, paid on the spot", "FAST" },
 		Board = { "OPEN", "We buy phones", "Come on in!" },
-		Shopkeeper = "me",
+		Shopkeeper = false,
 		ShopkeeperMoves = true,
 	},
 }
