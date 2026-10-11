@@ -25,6 +25,11 @@
 
 	  4. Do the same for the SELL stall.
 
+	The shopkeepers get your Roblox avatar's clothes, hair, face and skin
+	(set Shopkeeper in StallConfig to change that). To dress them again,
+	for example after changing your avatar:
+	    require(game.ServerStorage.PhoneStalls).DressShopkeepers()
+
 	Want the old look back? Select the stall and run:
 	    require(game.ServerStorage.PhoneStalls).Restore()
 	Changed StallConfig, or got a newer PhoneStalls? Run:
@@ -32,6 +37,7 @@
 ]]
 
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local StarterPlayer = game:GetService("StarterPlayer")
 
 local StallGeometry = require(script:WaitForChild("StallGeometry"))
@@ -49,7 +55,7 @@ export type BuildOptions = {
 
 local PhoneStalls = {}
 
-local VERSION = 1 -- bump when StallFX changes, so old copies get replaced
+local VERSION = 2 -- bump when StallFX changes, so old copies get replaced
 local SAVED = "PhoneStallsSaved_" -- prefix for the old stall's saved looks
 local SIGN_FONT = Enum.Font.FredokaOne
 local TEXT_FONT = Enum.Font.GothamMedium
@@ -270,6 +276,67 @@ local function drawGui(part: BasePart, g: StallGeometry.Gui, face: Enum.NormalId
 	elseif g.kind == "display" then
 		local gui = surface(part, face, 120, 1.6)
 		label(gui, g.text, Enum.Font.GothamBold, accent, 0.1, 0.2, 0.8, 0.6)
+	elseif g.kind == "ticker" then
+		-- LED strip; StallFX scrolls the two copies of the text along
+		local gui = surface(part, face, 100, 1.8)
+		make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 6, 8), BorderSizePixel = 0 }, gui)
+		local track = make("Frame", {
+			Name = "Track",
+			Position = UDim2.fromScale(0.01, 0.12),
+			Size = UDim2.fromScale(0.98, 0.76),
+			BackgroundTransparency = 1,
+			ClipsDescendants = true,
+		}, gui)
+		for _, name in { "A", "B" } do
+			local l = make("TextLabel", {
+				Name = name,
+				BackgroundTransparency = 1,
+				AutomaticSize = Enum.AutomaticSize.X,
+				Size = UDim2.new(0, 0, 1, 0),
+				Position = UDim2.fromOffset(if name == "A" then 0 else 4000, 0),
+				Font = Enum.Font.Arcade,
+				Text = g.text .. "    ",
+				TextSize = 60,
+				TextColor3 = accent:Lerp(white, 0.25),
+				TextXAlignment = Enum.TextXAlignment.Left,
+			}, track)
+			make("UIStroke", { Color = accent, Thickness = 2, Transparency = 0.6 }, l)
+		end
+	elseif g.kind == "poster" then
+		local gui = surface(part, face, 240, 1.4)
+		local bg = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = white, BorderSizePixel = 0 }, gui)
+		make("UIGradient", { Color = ColorSequence.new(accent:Lerp(Color3.new(0, 0, 0), 0.55), Color3.fromRGB(8, 8, 12)), Rotation = 90 }, bg)
+		make("UIStroke", { Color = accent, Thickness = 4 }, bg)
+		local phone = make("Frame", {
+			Position = UDim2.fromScale(0.07, 0.12),
+			Size = UDim2.fromScale(0.25, 0.76),
+			BackgroundColor3 = Color3.fromRGB(18, 18, 24),
+		}, gui)
+		make("UICorner", { CornerRadius = UDim.new(0.14, 0) }, phone)
+		make("UIStroke", { Color = accent:Lerp(white, 0.3), Thickness = 3 }, phone)
+		drawIcon(phone, g.icon, 60, accent)
+		local lines = g.lines
+		local head = label(gui, lines[1] or "", SIGN_FONT, accent:Lerp(white, 0.35), 0.38, 0.16, 0.58, 0.34, Enum.TextXAlignment.Left)
+		make("UIStroke", { Color = accent, Thickness = 2, Transparency = 0.5 }, head)
+		label(gui, lines[2] or "", TEXT_FONT, white, 0.38, 0.56, 0.58, 0.13, Enum.TextXAlignment.Left)
+		if lines[3] then
+			local badge = make("Frame", { Position = UDim2.fromScale(0.38, 0.75), Size = UDim2.fromScale(0.24, 0.13), BackgroundColor3 = accent }, gui)
+			make("UICorner", { CornerRadius = UDim.new(0.5, 0) }, badge)
+			label(badge, lines[3], Enum.Font.GothamBold, Color3.fromRGB(10, 10, 14), 0.1, 0.15, 0.8, 0.7)
+		end
+	elseif g.kind == "board" then
+		local gui = surface(part, face, 250, 1)
+		local slate = make("Frame", {
+			Position = UDim2.fromScale(0.08, 0.06),
+			Size = UDim2.fromScale(0.84, 0.88),
+			BackgroundColor3 = Color3.fromRGB(32, 40, 37),
+		}, gui)
+		make("UICorner", { CornerRadius = UDim.new(0.04, 0) }, slate)
+		local chalk = Color3.fromRGB(236, 236, 228)
+		for i, line in g.lines do
+			local first = i == 1
+			label(slate, line, Enum.Font.PermanentMarker, if first then accent:Lerp(white, 0.4) else chalk, 0.06, if first then 0.06 else 0.2 + i * 0.13, 0.88, if first then 0.24 else 0.12)
+		end
 	end
 end
 
@@ -325,6 +392,22 @@ local function makePart(p: Prim): BasePart
 	if p.light then
 		addLight(part, p.light)
 	end
+	if p.tag then
+		CollectionService:AddTag(part, p.tag)
+	end
+	if p.sparkles then
+		make("ParticleEmitter", {
+			Color = ColorSequence.new(rgb(p.sparkles)),
+			LightEmission = 1,
+			Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.22), NumberSequenceKeypoint.new(1, 0) }),
+			Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) }),
+			Lifetime = NumberRange.new(1, 1.8),
+			Rate = 6,
+			Speed = NumberRange.new(0.3, 0.8),
+			SpreadAngle = Vector2.new(180, 180),
+			RotSpeed = NumberRange.new(-90, 90),
+		}, part)
+	end
 	local g = p.gui
 	if g then
 		drawGui(part, g, (Enum.NormalId :: any)[g.face] or Enum.NormalId.Front)
@@ -378,6 +461,7 @@ local function buildStall(s: Stall, options: BuildOptions?): Model
 		elseif m.fx == "breathe" then
 			g:SetAttribute("Low", m.low)
 			g:SetAttribute("High", m.high)
+			g:SetAttribute("Radius", m.radius)
 			CollectionService:AddTag(g, "StallBreathe")
 		end
 		g.Parent = model
@@ -758,6 +842,187 @@ local function rebuildOurs(current: Model, stall: Stall): Model
 end
 
 --------------------------------------------------------------------------
+-- Shopkeepers
+--------------------------------------------------------------------------
+
+-- "me" means whoever is logged in to Studio (or the game's owner).
+local function resolveUser(who: any): number?
+	if type(who) == "number" and who > 0 then
+		return who
+	end
+	if type(who) == "string" and tonumber(who) then
+		return tonumber(who)
+	end
+	if who == nil or who == true or who == "me" then
+		local ok, id = pcall(function()
+			return (game:GetService("StudioService") :: any):GetUserId()
+		end)
+		if ok and type(id) == "number" and id > 0 then
+			return id
+		end
+		if game.CreatorType == Enum.CreatorType.User and game.CreatorId > 0 then
+			return game.CreatorId
+		end
+	end
+	return nil
+end
+
+local looks: { [string]: Model } = {}
+
+local function avatarLook(userId: number, rig: Enum.HumanoidRigType): (Model?, string?)
+	local key = `{userId}:{rig.Name}`
+	local cached = looks[key]
+	if cached then
+		return cached, nil
+	end
+	local ok, result = pcall(function()
+		local description = Players:GetHumanoidDescriptionFromUserId(userId)
+		return Players:CreateHumanoidModelFromDescription(description, rig)
+	end)
+	if not ok then
+		return nil, tostring(result)
+	end
+	looks[key] = result
+	return result, nil
+end
+
+local function bodyPart(model: Model, name: string): BasePart?
+	local p = model:FindFirstChild(name)
+	if p and p:IsA("BasePart") then
+		return p
+	end
+	return nil
+end
+
+-- The body part an accessory hangs off.
+local function wornOn(handle: BasePart): BasePart?
+	for _, j in handle:GetChildren() do
+		if j:IsA("JointInstance") or j:IsA("WeldConstraint") then
+			local joint = j :: any
+			local other = if joint.Part0 == handle then joint.Part1 else joint.Part0
+			if other and other:IsA("BasePart") then
+				return other
+			end
+		end
+	end
+	return nil
+end
+
+-- Puts the avatar's clothes, hair and hats, face and skin colour on the
+-- shopkeeper. Its body, position and any scripts stay as they are.
+local function dress(npc: Model, look: Model)
+	for _, c in npc:GetChildren() do
+		if c:IsA("Accessory") or c:IsA("Clothing") or c:IsA("ShirtGraphic") or c:IsA("BodyColors") or c:IsA("CharacterMesh") then
+			c:Destroy()
+		end
+	end
+	for _, c in look:GetChildren() do
+		if c:IsA("Clothing") or c:IsA("ShirtGraphic") or c:IsA("BodyColors") then
+			local copy: Instance = c:Clone()
+			copy.Parent = npc
+		elseif c:IsA("BasePart") and c.Name ~= "HumanoidRootPart" then
+			local mine = bodyPart(npc, c.Name)
+			if mine then
+				mine.Color = c.Color
+			end
+		end
+	end
+
+	local head, lookHead = bodyPart(npc, "Head"), bodyPart(look, "Head")
+	if head and lookHead then
+		local face = lookHead:FindFirstChild("face")
+		if face and face:IsA("Decal") then
+			for _, old in head:GetChildren() do
+				if old:IsA("Decal") and old.Name == "face" then
+					old:Destroy()
+				end
+			end
+			face:Clone().Parent = head
+		end
+	end
+
+	for _, accessory in look:GetChildren() do
+		local handle = if accessory:IsA("Accessory") then accessory:FindFirstChild("Handle") else nil
+		if handle and handle:IsA("BasePart") then
+			local theirs = wornOn(handle) or lookHead
+			local mine = if theirs then bodyPart(npc, theirs.Name) or head else head
+			if theirs and mine then
+				local copy = accessory:Clone()
+				local h = copy:FindFirstChild("Handle") :: BasePart
+				for _, j in h:GetChildren() do
+					if j:IsA("JointInstance") or j:IsA("WeldConstraint") then
+						j:Destroy()
+					end
+				end
+				h.CFrame = mine.CFrame * theirs.CFrame:ToObjectSpace(handle.CFrame)
+				h.Anchored = false
+				h.CanCollide = false
+				h.CanTouch = false
+				h.CanQuery = false
+				h.Massless = true
+				make("WeldConstraint", { Name = "AccessoryWeld", Part0 = mine, Part1 = h }, h)
+				copy.Parent = npc
+			end
+		end
+	end
+end
+
+-- Shopkeepers standing inside one of our stalls.
+local function shopkeepersIn(stall: Model): { Instance }
+	local fit = fitOf(stall)
+	local hw, hd = (fit.width or 14) / 2 + 0.5, (fit.depth or 9) / 2 + 0.5
+	local pivot = stall:GetPivot()
+	local found: { Instance } = {}
+	for _, h in workspace:GetDescendants() do
+		local npc = h.Parent
+		if h:IsA("Humanoid") and npc and npc:IsA("Model") and not npc:IsDescendantOf(stall) then
+			local root = npcRoot(npc)
+			if root then
+				local p = pivot:PointToObjectSpace(root.Position)
+				if math.abs(p.X) < hw and math.abs(p.Z) < hd and p.Y > -2 and p.Y < 12 then
+					table.insert(found, npc)
+				end
+			end
+		end
+	end
+	return found
+end
+
+local warnedNoUser = false
+
+-- Tags the shopkeepers for StallFX and dresses them. Returns how many were dressed.
+local function prepareShopkeepers(npcs: { Instance }, s: Stall): number
+	local dressed = 0
+	for _, npc in npcs do
+		if not npc:IsA("Model") then
+			continue
+		end
+		npc:SetAttribute("ShopkeeperMoves", s.ShopkeeperMoves ~= false)
+		CollectionService:AddTag(npc, "StallShopkeeper")
+		if s.Shopkeeper == false then
+			continue
+		end
+		local userId = resolveUser(s.Shopkeeper)
+		local humanoid = npc:FindFirstChildOfClass("Humanoid")
+		if not userId then
+			if not warnedNoUser then
+				warnedNoUser = true
+				warn("[PhoneStalls] I couldn't tell whose avatar to use. In StallConfig, set Shopkeeper to your UserId (the number in your Roblox profile link).")
+			end
+		elseif humanoid then
+			local look, problem = avatarLook(userId, humanoid.RigType)
+			if look then
+				dress(npc, look)
+				dressed += 1
+			else
+				warn(`[PhoneStalls] Couldn't load the avatar for user {userId}: {problem}`)
+			end
+		end
+	end
+	return dressed
+end
+
+--------------------------------------------------------------------------
 -- Public
 --------------------------------------------------------------------------
 
@@ -790,7 +1055,9 @@ function PhoneStalls.ReplaceSelected(name: string?, width: number?): Model?
 			return nil
 		end
 		waypoint("Before PhoneStalls")
+		table.clear(looks)
 		local model = rebuildOurs(old, s)
+		prepareShopkeepers(shopkeepersIn(model), s)
 		waypoint("PhoneStalls")
 		Selection:Set({ model })
 		return model
@@ -818,11 +1085,14 @@ function PhoneStalls.ReplaceSelected(name: string?, width: number?): Model?
 	local model = buildStall(s, { cframe = a.cframe, fit = a.fit, parent = old.Parent })
 	make("ObjectValue", { Name = "OldStall", Value = old }, model)
 	hideOld(old, a.npcs)
+	table.clear(looks)
+	local dressed = prepareShopkeepers(a.npcs, s)
 	waypoint("PhoneStalls")
 	Selection:Set({ model })
 
 	local note = if a.padFound then "The floor circle is on top of your old one." else "I couldn't find your old floor circle, so the new one is in front of the counter."
-	print(`[PhoneStalls] Built "{model.Name}". The old stall is hidden but still works. {note}`)
+	local keeper = if dressed > 0 then " The shopkeeper is wearing your avatar." elseif #a.npcs == 0 then " I didn't find a shopkeeper in this stall." else ""
+	print(`[PhoneStalls] Built "{model.Name}". The old stall is hidden but still works. {note}{keeper}`)
 	return model
 end
 
@@ -863,12 +1133,15 @@ function PhoneStalls.Rebuild(): { Model }
 		end
 	end
 	waypoint("Before PhoneStalls rebuild")
+	table.clear(looks)
 	local models = {}
 	for _, current in found do
 		local name = current:GetAttribute("PhoneStall") :: string
 		local s = findStall(stalls, name)
 		if s then
-			table.insert(models, rebuildOurs(current, s))
+			local model = rebuildOurs(current, s)
+			prepareShopkeepers(shopkeepersIn(model), s)
+			table.insert(models, model)
 		else
 			warn(`[PhoneStalls] Skipped "{name}": it is not in StallConfig any more.`)
 		end
@@ -876,6 +1149,26 @@ function PhoneStalls.Rebuild(): { Model }
 	waypoint("PhoneStalls rebuild")
 	print(`[PhoneStalls] Rebuilt {#models} stall(s).`)
 	return models
+end
+
+-- Dresses the shopkeepers in every stall. `who` is "me" (default) or a UserId.
+function PhoneStalls.DressShopkeepers(who: any?): number
+	local stalls = loadConfig()
+	table.clear(looks)
+	warnedNoUser = false
+	local count = 0
+	waypoint("Before PhoneStalls dress")
+	for _, d in workspace:GetDescendants() do
+		local name = d:GetAttribute("PhoneStall")
+		if d:IsA("Model") and type(name) == "string" then
+			local s: Stall = table.clone(findStall(stalls, name) or {})
+			s.Shopkeeper = if who ~= nil then who elseif s.Shopkeeper == false then "me" else s.Shopkeeper
+			count += prepareShopkeepers(shopkeepersIn(d), s)
+		end
+	end
+	waypoint("PhoneStalls dress")
+	print(`[PhoneStalls] Dressed {count} shopkeeper(s).`)
+	return count
 end
 
 return PhoneStalls
@@ -903,6 +1196,15 @@ return {
 		Menu = { "FRESH PHONES", "Grown on the farm today", "Step on the circle to buy" },
 		OpenSign = true, -- the little neon OPEN sign
 		Plants = true, -- potted plants by the front corners
+		StringLights = true, -- warm bulbs hanging from the roof edge
+		Ticker = "NEW PHONES EVERY DAY  *  BEST PRICES IN TOWN  *  COME ON IN  *", -- scrolling LED text on the roof edge
+		Poster = { "NEW PHONES", "Fresh from the farm every day", "HOT" }, -- the lit posters on both sides
+		Board = { "OPEN", "Phones in stock", "Come on in!" }, -- the chalkboard out front
+
+		-- Who the shopkeeper looks like: "me" (your Roblox avatar), someone's
+		-- UserId (the number in their profile link), or false to leave them.
+		Shopkeeper = "me",
+		ShopkeeperMoves = true, -- idles and waves when someone walks up
 	},
 	{
 		Name = "Sell Stall",
@@ -913,6 +1215,12 @@ return {
 		Menu = { "WE BUY PHONES", "Instant cash for any phone", "Step on the circle to sell" },
 		OpenSign = true,
 		Plants = true,
+		StringLights = true,
+		Ticker = "WE BUY PHONES  *  INSTANT CASH  *  ANY PHONE, ANY SIZE  *",
+		Poster = { "CASH FOR PHONES", "Any phone, paid on the spot", "FAST" },
+		Board = { "OPEN", "We buy phones", "Come on in!" },
+		Shopkeeper = "me",
+		ShopkeeperMoves = true,
 	},
 }
 ]]></string>
@@ -928,18 +1236,33 @@ return {
 	Animates the stalls on each player's screen:
 	  * the icons above the floor circles spin and float up and down
 	  * the display phone on the BUY counter turns on its turntable
-	  * the glow round the floor circles fades in and out
+	  * the glow round the floor circles fades in and out, and lights up
+	    while you stand on the circle
 	  * the neon signs flicker now and then, like real neon
+	  * the LED ticker on the roof edge scrolls
+	  * the shopkeepers stand idle and wave when you walk up
 ]]
 
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+
+local WAVE_DISTANCE = 16 -- studs from the shopkeeper
+local WAVE_EVERY = 10 -- seconds before the same shopkeeper waves again
+local TICKER_SPEED = 90 -- pixels per second
+local ANIMATIONS = {
+	R15 = { idle = "rbxassetid://507766666", wave = "rbxassetid://507770239" },
+	R6 = { idle = "rbxassetid://180435571", wave = "rbxassetid://128777973" },
+}
 
 type Spinner = { base: CFrame, speed: number, bob: number, phase: number }
 
 local spinners: { [Model]: Spinner } = {}
-local breathers: { [Model]: { low: number, high: number } } = {}
+local breathers: { [Model]: { low: number, high: number, radius: number, boost: number } } = {}
 local flickering: { [Model]: number } = {} -- next time each sign flickers
+local tickers: { [BasePart]: boolean } = {}
+type Keeper = { root: BasePart, wave: AnimationTrack?, lastWave: number, near: boolean }
+local keepers: { [Model]: Keeper } = {}
 
 local function number(inst: Instance, name: string, default: number): number
 	local v = inst:GetAttribute(name)
@@ -971,7 +1294,7 @@ end, function(m)
 end)
 
 watch("StallBreathe", function(m)
-	breathers[m] = { low = number(m, "Low", 0.7), high = number(m, "High", 0.9) }
+	breathers[m] = { low = number(m, "Low", 0.7), high = number(m, "High", 0.9), radius = number(m, "Radius", 0), boost = 0 }
 end, function(m)
 	breathers[m] = nil
 end)
@@ -981,6 +1304,87 @@ watch("StallFlicker", function(m)
 end, function(m)
 	flickering[m] = nil
 end)
+
+local function playerRoot(): BasePart?
+	local character = Players.LocalPlayer.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	return if root and root:IsA("BasePart") then root else nil
+end
+
+-- Shopkeepers: a gentle idle, and a wave when someone walks up
+local function loadTrack(animator: Animator, id: string, looped: boolean, priority: Enum.AnimationPriority): AnimationTrack?
+	local animation = Instance.new("Animation")
+	animation.AnimationId = id
+	local ok, track = pcall(function()
+		return animator:LoadAnimation(animation)
+	end)
+	if not ok or not track then
+		return nil
+	end
+	track.Looped = looped
+	track.Priority = priority
+	return track
+end
+
+watch("StallShopkeeper", function(m)
+	if m:GetAttribute("ShopkeeperMoves") == false then
+		return
+	end
+	local humanoid = m:FindFirstChildOfClass("Humanoid")
+	local root = if humanoid then humanoid.RootPart or m:FindFirstChild("HumanoidRootPart") else nil
+	if not humanoid or not root or not root:IsA("BasePart") then
+		return
+	end
+	local found = humanoid:FindFirstChildOfClass("Animator")
+	local animator: Animator
+	if found then
+		animator = found
+	else
+		animator = Instance.new("Animator")
+		animator.Parent = humanoid
+	end
+	local ids = if humanoid.RigType == Enum.HumanoidRigType.R15 then ANIMATIONS.R15 else ANIMATIONS.R6
+	local idle = loadTrack(animator, ids.idle, true, Enum.AnimationPriority.Idle)
+	if idle then
+		idle:Play()
+	end
+	keepers[m] = { root = root, wave = loadTrack(animator, ids.wave, false, Enum.AnimationPriority.Action), lastWave = 0, near = false }
+end, function(m)
+	keepers[m] = nil
+end)
+
+-- LED tickers on the roof edge
+local function addTicker(inst: Instance)
+	if inst:IsA("BasePart") then
+		tickers[inst] = true
+	end
+end
+for _, inst in CollectionService:GetTagged("StallTicker") do
+	addTicker(inst)
+end
+CollectionService:GetInstanceAddedSignal("StallTicker"):Connect(addTicker)
+CollectionService:GetInstanceRemovedSignal("StallTicker"):Connect(function(inst)
+	if inst:IsA("BasePart") then
+		tickers[inst] = nil
+	end
+end)
+
+local function scrollTicker(part: BasePart, t: number)
+	local gui = part:FindFirstChild("Screen")
+	local track = gui and gui:FindFirstChild("Track")
+	local a = track and track:FindFirstChild("A")
+	local b = track and track:FindFirstChild("B")
+	if not a or not b or not a:IsA("GuiObject") or not b:IsA("GuiObject") then
+		return
+	end
+	local width = a.AbsoluteSize.X
+	if width <= 0 then
+		return
+	end
+	local shift = (t * TICKER_SPEED) % width
+	a.Position = UDim2.fromOffset(-shift, 0)
+	b.Position = UDim2.fromOffset(width - shift, 0)
+end
 
 -- Switches a sign's neon and screens off or back on.
 local saved: { [BasePart]: number } = setmetatable({}, { __mode = "k" }) :: any
@@ -1010,17 +1414,25 @@ local function flicker(m: Model)
 	end)
 end
 
-RunService.RenderStepped:Connect(function()
+RunService.RenderStepped:Connect(function(dt: number)
 	local t = os.clock()
+	local me = playerRoot()
 	for m, s in spinners do
 		if m.Parent then
 			local lift = s.bob * math.sin(t * 1.6 + s.phase)
 			m:PivotTo(s.base * CFrame.new(0, lift, 0) * CFrame.Angles(0, t * s.speed + s.phase, 0))
 		end
 	end
-	local wave = 0.5 + 0.5 * math.sin(t * 2.2)
 	for m, b in breathers do
-		local transparency = b.low + (b.high - b.low) * wave
+		-- brighter, faster glow while you stand on the circle
+		local inside = false
+		if me and b.radius > 0 then
+			local centre = m:GetPivot().Position
+			inside = Vector3.new(me.Position.X - centre.X, 0, me.Position.Z - centre.Z).Magnitude < b.radius
+		end
+		b.boost += ((if inside then 1 else 0) - b.boost) * math.min(1, dt * 6)
+		local wave = 0.5 + 0.5 * math.sin(t * (2.2 + b.boost * 4))
+		local transparency = b.low + (b.high - b.low) * wave - b.boost * 0.35
 		for _, d in m:GetDescendants() do
 			if d:IsA("BasePart") then
 				d.Transparency = transparency
@@ -1032,6 +1444,17 @@ RunService.RenderStepped:Connect(function()
 			flickering[m] = t + 6 + math.random() * 12
 			flicker(m)
 		end
+	end
+	for part in tickers do
+		scrollTicker(part, t)
+	end
+	for _, k in keepers do
+		local near = me ~= nil and (me.Position - k.root.Position).Magnitude < WAVE_DISTANCE
+		if near and not k.near and t - k.lastWave > WAVE_EVERY and k.wave then
+			k.lastWave = t
+			k.wave:Play()
+		end
+		k.near = near
 	end
 end)
 ]]></string>
@@ -1091,6 +1514,8 @@ export type Prim = {
 	shadow: boolean,
 	light: Light?,
 	gui: Gui?,
+	tag: string?, -- CollectionService tag for StallFX, e.g. "StallTicker"
+	sparkles: RGB?, -- floating sparkles in this colour
 }
 
 export type Motion = {
@@ -1101,6 +1526,7 @@ export type Motion = {
 	bob: number, -- spin: studs up and down
 	low: number, -- breathe: transparency range
 	high: number,
+	radius: number, -- breathe: glows brighter while the player stands inside this radius
 }
 
 export type Stall = { -- one entry in StallConfig
@@ -1112,6 +1538,12 @@ export type Stall = { -- one entry in StallConfig
 	Menu: { string }?,
 	OpenSign: boolean?,
 	Plants: boolean?,
+	Ticker: string?, -- scrolling LED text along the roof edge
+	Poster: { string }?, -- headline and line on the lit posters on both sides
+	Board: { string }?, -- chalkboard sign out front, one entry per line
+	StringLights: boolean?, -- warm bulbs hanging from the roof edge
+	Shopkeeper: any?, -- "me", a UserId, or false (PhoneStalls dresses the shopkeeper)
+	ShopkeeperMoves: boolean?, -- shopkeeper idles and waves (StallFX)
 }
 
 export type Fit = {
@@ -1172,6 +1604,8 @@ type Props = {
 	shadow: boolean?,
 	light: Light?,
 	gui: Gui?,
+	tag: string?,
+	sparkles: RGB?,
 }
 
 type Ctx = { prims: { Prim }, group: string }
@@ -1192,6 +1626,8 @@ local function add(ctx: Ctx, kind: string, name: string, size: Vec, pos: Vec, ro
 		shadow = if p.shadow == nil then true else p.shadow,
 		light = p.light,
 		gui = p.gui,
+		tag = p.tag,
+		sparkles = p.sparkles,
 	})
 end
 
@@ -1278,8 +1714,8 @@ function StallGeometry.Shapes(s: Stall, fit: Fit?): Result
 
 	local ctx: Ctx = { prims = {}, group = "Base" }
 	local motions: { Motion } = {}
-	local function motion(group: string, fx: string, pivot: Vec, speed: number, bob: number, low: number, high: number)
-		table.insert(motions, { group = group, fx = fx, pivot = pivot, speed = speed, bob = bob, low = low, high = high })
+	local function motion(group: string, fx: string, pivot: Vec, speed: number, bob: number, low: number, high: number, radius: number?)
+		table.insert(motions, { group = group, fx = fx, pivot = pivot, speed = speed, bob = bob, low = low, high = high, radius = radius or 0 })
 	end
 
 	------------------------------------------------------------------ base
@@ -1393,7 +1829,37 @@ function StallGeometry.Shapes(s: Stall, fit: Fit?): Result
 	------------------------------------------------------------------ roof
 	ctx.group = "Roof"
 	box(ctx, "Roof", { W + 1.2, 0.5, D + 1.6 }, { 0, RH + 0.25, -0.5 }, { color = { 26, 27, 31 } })
-	box(ctx, "Fascia", { W + 1.3, 1, 0.25 }, { 0, RH + 0.2, front - 1.42 }, { color = { 34, 36, 40 }, material = "Metal" })
+	box(ctx, "Fascia", { W + 1.3, 1, 0.25 }, { 0, RH + 0.2, front - 1.42 }, {
+		color = { 34, 36, 40 },
+		material = "Metal",
+		tag = "StallTicker",
+		gui = gui("ticker", accent, { text = s.Ticker or `{string.upper(text)} PHONES  *  OPEN NOW  *` }),
+	})
+
+	-- String of warm bulbs swagging under the roof edge
+	if s.StringLights ~= false then
+		local wire: Props = { color = { 24, 24, 26 }, solid = false, shadow = false }
+		local bulb: Props = { color = { 255, 206, 130 }, material = "Neon", solid = false, shadow = false }
+		local yA, zA = RH - 0.42, front - 1.58
+		local ends = { -(W / 2 + 0.4), 0, W / 2 + 0.4 }
+		for swag = 1, 2 do
+			local x0, x1 = ends[swag], ends[swag + 1]
+			local n = math.max(4, math.floor((x1 - x0) / 1.1 + 0.5))
+			local sag = 0.55 + (x1 - x0) * 0.03
+			local last: Vec = { x0, yA, zA }
+			for i = 1, n do
+				local t = i / n
+				local point: Vec = { x0 + (x1 - x0) * t, yA - sag * 4 * t * (1 - t), zA }
+				local dx, dy = point[1] - last[1], point[2] - last[2]
+				local mid: Vec = { (point[1] + last[1]) / 2, (point[2] + last[2]) / 2, zA }
+				add(ctx, "cyl", "Wire", { math.sqrt(dx * dx + dy * dy), 0.05, 0.05 }, mid, rotZ(math.deg(math.atan2(dy, dx))), wire)
+				if i < n then
+					ball(ctx, "Bulb", 0.13, { point[1], point[2] - 0.14, zA }, bulb)
+				end
+				last = point
+			end
+		end
+	end
 	box(ctx, "RoofGlow", { W + 1.3, 0.1, 0.1 }, { 0, RH - 0.32, front - 1.52 }, neon(accent))
 	for _, sx in { -1, 1 } do
 		box(ctx, "RoofGlow", { 0.1, 0.1, D + 1.6 }, { sx * (W / 2 + 0.62), RH + 0.02, -0.5 }, neon(accent))
@@ -1512,6 +1978,24 @@ function StallGeometry.Shapes(s: Stall, fit: Fit?): Result
 		box(ctx, "BagHandle", { 0.44, 0.04, 0.04 }, { bx, CT + 1.25, zi + 0.45 }, deco(WHITE))
 	end
 
+	------------------------------------------------------------------ posters and chalkboard
+	ctx.group = "Signs"
+	local poster = s.Poster or { if kind == "sell" then "CASH FOR PHONES" else "NEW PHONES", if kind == "sell" then "Any phone, paid on the spot" else "Fresh from the farm every day" }
+	for _, sx in { -1, 1 } do
+		box(ctx, "Poster", { 0.1, 2.4, 3.8 }, { sx * (W / 2 - 0.22), FL + 1.75, 0.6 }, {
+			color = { 14, 14, 18 },
+			gui = gui("poster", accent, { lines = poster, face = if sx > 0 then "Right" else "Left", icon = icon }),
+		})
+	end
+	local bx, bz = -(W / 2 - 1.3), front - 2.3
+	local boardLines = s.Board or { "OPEN", if kind == "sell" then "We buy phones" else "Phones in stock", "Come on in!" }
+	add(ctx, "box", "Chalkboard", { 1.7, 2.5, 0.08 }, { bx, 1.22, bz - 0.26 }, rotX(12), {
+		color = { 120, 86, 56 },
+		material = "Wood",
+		gui = gui("board", accent, { lines = boardLines }),
+	})
+	add(ctx, "box", "ChalkboardBack", { 1.7, 2.5, 0.08 }, { bx, 1.22, bz + 0.26 }, rotX(-12), { color = { 120, 86, 56 }, material = "Wood" })
+
 	------------------------------------------------------------------ plants
 	if s.Plants ~= false then
 		ctx.group = "Plants"
@@ -1533,7 +2017,7 @@ function StallGeometry.Shapes(s: Stall, fit: Fit?): Result
 	post(ctx, "PadCentre", R * 0.62 - 0.12, 0.1, { padX, 0.05, padZ }, { color = { 24, 24, 30 }, solid = false })
 	ctx.group = "PadGlow"
 	post(ctx, "PadGlow", R + 0.7, 0.03, { padX, 0.015, padZ }, neon(accent, 0.88))
-	motion("PadGlow", "breathe", { padX, 0, padZ }, 0, 0, 0.82, 0.95)
+	motion("PadGlow", "breathe", { padX, 0, padZ }, 0, 0, 0.82, 0.95, R)
 
 	ctx.group = "Token"
 	local ty = 4.4
@@ -1541,6 +2025,7 @@ function StallGeometry.Shapes(s: Stall, fit: Fit?): Result
 		color = { 16, 16, 20 },
 		solid = false,
 		light = { kind = "point", color = accent, brightness = 1.2, range = 10, angle = 0, face = "Front" },
+		sparkles = mix(accent, WHITE, 0.4),
 	})
 	disc(ctx, "TokenRim", 0.88, 0.16, { padX, ty, padZ }, neon(accent))
 	box(ctx, "TokenIcon", { 1.2, 1.2, 0.24 }, { padX, ty, padZ }, {

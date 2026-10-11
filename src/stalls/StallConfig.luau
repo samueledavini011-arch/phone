@@ -17,6 +17,15 @@ return {
 		Menu = { "FRESH PHONES", "Grown on the farm today", "Step on the circle to buy" },
 		OpenSign = true, -- the little neon OPEN sign
 		Plants = true, -- potted plants by the front corners
+		StringLights = true, -- warm bulbs hanging from the roof edge
+		Ticker = "NEW PHONES EVERY DAY  *  BEST PRICES IN TOWN  *  COME ON IN  *", -- scrolling LED text on the roof edge
+		Poster = { "NEW PHONES", "Fresh from the farm every day", "HOT" }, -- the lit posters on both sides
+		Board = { "OPEN", "Phones in stock", "Come on in!" }, -- the chalkboard out front
+
+		-- Who the shopkeeper looks like: "me" (your Roblox avatar), someone's
+		-- UserId (the number in their profile link), or false to leave them.
+		Shopkeeper = "me",
+		ShopkeeperMoves = true, -- idles and waves when someone walks up
 	},
 	{
 		Name = "Sell Stall",
@@ -27,5 +36,11 @@ return {
 		Menu = { "WE BUY PHONES", "Instant cash for any phone", "Step on the circle to sell" },
 		OpenSign = true,
 		Plants = true,
+		StringLights = true,
+		Ticker = "WE BUY PHONES  *  INSTANT CASH  *  ANY PHONE, ANY SIZE  *",
+		Poster = { "CASH FOR PHONES", "Any phone, paid on the spot", "FAST" },
+		Board = { "OPEN", "We buy phones", "Come on in!" },
+		Shopkeeper = "me",
+		ShopkeeperMoves = true,
 	},
 }

@@ -49,6 +49,8 @@ export type Prim = {
 	shadow: boolean,
 	light: Light?,
 	gui: Gui?,
+	tag: string?, -- CollectionService tag for StallFX, e.g. "StallTicker"
+	sparkles: RGB?, -- floating sparkles in this colour
 }
 
 export type Motion = {
@@ -59,6 +61,7 @@ export type Motion = {
 	bob: number, -- spin: studs up and down
 	low: number, -- breathe: transparency range
 	high: number,
+	radius: number, -- breathe: glows brighter while the player stands inside this radius
 }
 
 export type Stall = { -- one entry in StallConfig
@@ -70,6 +73,12 @@ export type Stall = { -- one entry in StallConfig
 	Menu: { string }?,
 	OpenSign: boolean?,
 	Plants: boolean?,
+	Ticker: string?, -- scrolling LED text along the roof edge
+	Poster: { string }?, -- headline and line on the lit posters on both sides
+	Board: { string }?, -- chalkboard sign out front, one entry per line
+	StringLights: boolean?, -- warm bulbs hanging from the roof edge
+	Shopkeeper: any?, -- "me", a UserId, or false (PhoneStalls dresses the shopkeeper)
+	ShopkeeperMoves: boolean?, -- shopkeeper idles and waves (StallFX)
 }
 
 export type Fit = {
@@ -130,6 +139,8 @@ type Props = {
 	shadow: boolean?,
 	light: Light?,
 	gui: Gui?,
+	tag: string?,
+	sparkles: RGB?,
 }
 
 type Ctx = { prims: { Prim }, group: string }
@@ -150,6 +161,8 @@ local function add(ctx: Ctx, kind: string, name: string, size: Vec, pos: Vec, ro
 		shadow = if p.shadow == nil then true else p.shadow,
 		light = p.light,
 		gui = p.gui,
+		tag = p.tag,
+		sparkles = p.sparkles,
 	})
 end
 
@@ -236,8 +249,8 @@ function StallGeometry.Shapes(s: Stall, fit: Fit?): Result
 
 	local ctx: Ctx = { prims = {}, group = "Base" }
 	local motions: { Motion } = {}
-	local function motion(group: string, fx: string, pivot: Vec, speed: number, bob: number, low: number, high: number)
-		table.insert(motions, { group = group, fx = fx, pivot = pivot, speed = speed, bob = bob, low = low, high = high })
+	local function motion(group: string, fx: string, pivot: Vec, speed: number, bob: number, low: number, high: number, radius: number?)
+		table.insert(motions, { group = group, fx = fx, pivot = pivot, speed = speed, bob = bob, low = low, high = high, radius = radius or 0 })
 	end
 
 	------------------------------------------------------------------ base
@@ -351,7 +364,37 @@ function StallGeometry.Shapes(s: Stall, fit: Fit?): Result
 	------------------------------------------------------------------ roof
 	ctx.group = "Roof"
 	box(ctx, "Roof", { W + 1.2, 0.5, D + 1.6 }, { 0, RH + 0.25, -0.5 }, { color = { 26, 27, 31 } })
-	box(ctx, "Fascia", { W + 1.3, 1, 0.25 }, { 0, RH + 0.2, front - 1.42 }, { color = { 34, 36, 40 }, material = "Metal" })
+	box(ctx, "Fascia", { W + 1.3, 1, 0.25 }, { 0, RH + 0.2, front - 1.42 }, {
+		color = { 34, 36, 40 },
+		material = "Metal",
+		tag = "StallTicker",
+		gui = gui("ticker", accent, { text = s.Ticker or `{string.upper(text)} PHONES  *  OPEN NOW  *` }),
+	})
+
+	-- String of warm bulbs swagging under the roof edge
+	if s.StringLights ~= false then
+		local wire: Props = { color = { 24, 24, 26 }, solid = false, shadow = false }
+		local bulb: Props = { color = { 255, 206, 130 }, material = "Neon", solid = false, shadow = false }
+		local yA, zA = RH - 0.42, front - 1.58
+		local ends = { -(W / 2 + 0.4), 0, W / 2 + 0.4 }
+		for swag = 1, 2 do
+			local x0, x1 = ends[swag], ends[swag + 1]
+			local n = math.max(4, math.floor((x1 - x0) / 1.1 + 0.5))
+			local sag = 0.55 + (x1 - x0) * 0.03
+			local last: Vec = { x0, yA, zA }
+			for i = 1, n do
+				local t = i / n
+				local point: Vec = { x0 + (x1 - x0) * t, yA - sag * 4 * t * (1 - t), zA }
+				local dx, dy = point[1] - last[1], point[2] - last[2]
+				local mid: Vec = { (point[1] + last[1]) / 2, (point[2] + last[2]) / 2, zA }
+				add(ctx, "cyl", "Wire", { math.sqrt(dx * dx + dy * dy), 0.05, 0.05 }, mid, rotZ(math.deg(math.atan2(dy, dx))), wire)
+				if i < n then
+					ball(ctx, "Bulb", 0.13, { point[1], point[2] - 0.14, zA }, bulb)
+				end
+				last = point
+			end
+		end
+	end
 	box(ctx, "RoofGlow", { W + 1.3, 0.1, 0.1 }, { 0, RH - 0.32, front - 1.52 }, neon(accent))
 	for _, sx in { -1, 1 } do
 		box(ctx, "RoofGlow", { 0.1, 0.1, D + 1.6 }, { sx * (W / 2 + 0.62), RH + 0.02, -0.5 }, neon(accent))
@@ -470,6 +513,24 @@ function StallGeometry.Shapes(s: Stall, fit: Fit?): Result
 		box(ctx, "BagHandle", { 0.44, 0.04, 0.04 }, { bx, CT + 1.25, zi + 0.45 }, deco(WHITE))
 	end
 
+	------------------------------------------------------------------ posters and chalkboard
+	ctx.group = "Signs"
+	local poster = s.Poster or { if kind == "sell" then "CASH FOR PHONES" else "NEW PHONES", if kind == "sell" then "Any phone, paid on the spot" else "Fresh from the farm every day" }
+	for _, sx in { -1, 1 } do
+		box(ctx, "Poster", { 0.1, 2.4, 3.8 }, { sx * (W / 2 - 0.22), FL + 1.75, 0.6 }, {
+			color = { 14, 14, 18 },
+			gui = gui("poster", accent, { lines = poster, face = if sx > 0 then "Right" else "Left", icon = icon }),
+		})
+	end
+	local bx, bz = -(W / 2 - 1.3), front - 2.3
+	local boardLines = s.Board or { "OPEN", if kind == "sell" then "We buy phones" else "Phones in stock", "Come on in!" }
+	add(ctx, "box", "Chalkboard", { 1.7, 2.5, 0.08 }, { bx, 1.22, bz - 0.26 }, rotX(12), {
+		color = { 120, 86, 56 },
+		material = "Wood",
+		gui = gui("board", accent, { lines = boardLines }),
+	})
+	add(ctx, "box", "ChalkboardBack", { 1.7, 2.5, 0.08 }, { bx, 1.22, bz + 0.26 }, rotX(-12), { color = { 120, 86, 56 }, material = "Wood" })
+
 	------------------------------------------------------------------ plants
 	if s.Plants ~= false then
 		ctx.group = "Plants"
@@ -491,7 +552,7 @@ function StallGeometry.Shapes(s: Stall, fit: Fit?): Result
 	post(ctx, "PadCentre", R * 0.62 - 0.12, 0.1, { padX, 0.05, padZ }, { color = { 24, 24, 30 }, solid = false })
 	ctx.group = "PadGlow"
 	post(ctx, "PadGlow", R + 0.7, 0.03, { padX, 0.015, padZ }, neon(accent, 0.88))
-	motion("PadGlow", "breathe", { padX, 0, padZ }, 0, 0, 0.82, 0.95)
+	motion("PadGlow", "breathe", { padX, 0, padZ }, 0, 0, 0.82, 0.95, R)
 
 	ctx.group = "Token"
 	local ty = 4.4
@@ -499,6 +560,7 @@ function StallGeometry.Shapes(s: Stall, fit: Fit?): Result
 		color = { 16, 16, 20 },
 		solid = false,
 		light = { kind = "point", color = accent, brightness = 1.2, range = 10, angle = 0, face = "Front" },
+		sparkles = mix(accent, WHITE, 0.4),
 	})
 	disc(ctx, "TokenRim", 0.88, 0.16, { padX, ty, padZ }, neon(accent))
 	box(ctx, "TokenIcon", { 1.2, 1.2, 0.24 }, { padX, ty, padZ }, {

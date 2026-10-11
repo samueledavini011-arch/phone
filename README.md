@@ -224,14 +224,19 @@ To rebuild the file after editing the scripts, run
   phones on stands, a shopping bag, a card reader and a service bell. SELL
   gets a cash register, bundles of cash and a phone being checked on a
   glowing tray.
-- A big neon sign on the roof that flickers now and then, a little OPEN
-  sign, neon lines on the pillars, roof and base, and glass side panels.
-- A glowing floor circle with a breathing glow and a spinning icon floating
-  above it, plus potted plants by the corners.
+- A big neon sign on the roof that flickers now and then, a scrolling LED
+  ticker along the roof edge, warm string lights, a little OPEN sign, neon
+  lines on the pillars, roof and base, and glass side panels.
+- Lit posters on both sides and a chalkboard A-frame sign out front.
+- A glowing floor circle that pulses, and lights up while you stand on it,
+  with a spinning icon and sparkles floating above it.
+- Potted plants by the corners.
 - Real lights: downlights over the counter, a light in the stall, coloured
   light from the sign and from under the base.
+- The shopkeepers wear your Roblox avatar (clothes, hair and hats, face and
+  skin colour), stand idle, and wave when someone walks up.
 
-Each stall is about 160 parts.
+Each stall is about 190 parts.
 
 Your shopkeepers and your buy/sell scripts are not touched. The old stall's
 parts are made invisible but keep working: players can still step on, touch
@@ -257,9 +262,17 @@ the name: `ReplaceSelected("Sell Stall")`. To set the width yourself, add
 it in studs: `ReplaceSelected("Sell Stall", 16)`.
 
 The first time, it also adds a LocalScript called **StallFX** to
-StarterPlayerScripts. It spins the floating icons and the turntable, makes
-the floor glow breathe and makes the neon signs flicker. These only move
-while the game is running.
+StarterPlayerScripts. It spins the floating icons and the turntable,
+scrolls the ticker, makes the floor glow pulse and the neon signs flicker,
+and plays the shopkeepers' idle and wave animations. These only move while
+the game is running.
+
+"me" means the account you're signed in to Studio with. To dress the
+shopkeepers again (after changing your avatar, say), run
+`require(game.ServerStorage.PhoneStalls).DressShopkeepers()`. For someone
+else's avatar, put their UserId in the brackets, or set `Shopkeeper` in
+StallConfig. Only their clothes, hair and hats, face and skin colour are
+copied, so the shopkeeper keeps its own body, position and scripts.
 
 To put an old stall back, select it (or its new look) and run
 `require(game.ServerStorage.PhoneStalls).Restore()`.
@@ -268,7 +281,8 @@ To put an old stall back, select it (or its new look) and run
 
 Open **PhoneStalls > StallConfig**. Each stall has its sign text, its neon
 colour, the icon (`bag`, `cash`, `phone`, `none` or an image ID), the menu
-board lines, and whether to show the OPEN sign and the plants. After a
+board, ticker, poster and chalkboard words, whether to show the OPEN sign,
+plants and string lights, and who the shopkeeper looks like. After a
 change, or after putting in a newer `PhoneStalls.rbxmx`, run
 `require(game.ServerStorage.PhoneStalls).Rebuild()`.
 

@@ -21,6 +21,11 @@
 
 	  4. Do the same for the SELL stall.
 
+	The shopkeepers get your Roblox avatar's clothes, hair, face and skin
+	(set Shopkeeper in StallConfig to change that). To dress them again,
+	for example after changing your avatar:
+	    require(game.ServerStorage.PhoneStalls).DressShopkeepers()
+
 	Want the old look back? Select the stall and run:
 	    require(game.ServerStorage.PhoneStalls).Restore()
 	Changed StallConfig, or got a newer PhoneStalls? Run:
@@ -28,6 +33,7 @@
 ]]
 
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local StarterPlayer = game:GetService("StarterPlayer")
 
 local StallGeometry = require(script:WaitForChild("StallGeometry"))
@@ -45,7 +51,7 @@ export type BuildOptions = {
 
 local PhoneStalls = {}
 
-local VERSION = 1 -- bump when StallFX changes, so old copies get replaced
+local VERSION = 2 -- bump when StallFX changes, so old copies get replaced
 local SAVED = "PhoneStallsSaved_" -- prefix for the old stall's saved looks
 local SIGN_FONT = Enum.Font.FredokaOne
 local TEXT_FONT = Enum.Font.GothamMedium
@@ -266,6 +272,67 @@ local function drawGui(part: BasePart, g: StallGeometry.Gui, face: Enum.NormalId
 	elseif g.kind == "display" then
 		local gui = surface(part, face, 120, 1.6)
 		label(gui, g.text, Enum.Font.GothamBold, accent, 0.1, 0.2, 0.8, 0.6)
+	elseif g.kind == "ticker" then
+		-- LED strip; StallFX scrolls the two copies of the text along
+		local gui = surface(part, face, 100, 1.8)
+		make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 6, 8), BorderSizePixel = 0 }, gui)
+		local track = make("Frame", {
+			Name = "Track",
+			Position = UDim2.fromScale(0.01, 0.12),
+			Size = UDim2.fromScale(0.98, 0.76),
+			BackgroundTransparency = 1,
+			ClipsDescendants = true,
+		}, gui)
+		for _, name in { "A", "B" } do
+			local l = make("TextLabel", {
+				Name = name,
+				BackgroundTransparency = 1,
+				AutomaticSize = Enum.AutomaticSize.X,
+				Size = UDim2.new(0, 0, 1, 0),
+				Position = UDim2.fromOffset(if name == "A" then 0 else 4000, 0),
+				Font = Enum.Font.Arcade,
+				Text = g.text .. "    ",
+				TextSize = 60,
+				TextColor3 = accent:Lerp(white, 0.25),
+				TextXAlignment = Enum.TextXAlignment.Left,
+			}, track)
+			make("UIStroke", { Color = accent, Thickness = 2, Transparency = 0.6 }, l)
+		end
+	elseif g.kind == "poster" then
+		local gui = surface(part, face, 240, 1.4)
+		local bg = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = white, BorderSizePixel = 0 }, gui)
+		make("UIGradient", { Color = ColorSequence.new(accent:Lerp(Color3.new(0, 0, 0), 0.55), Color3.fromRGB(8, 8, 12)), Rotation = 90 }, bg)
+		make("UIStroke", { Color = accent, Thickness = 4 }, bg)
+		local phone = make("Frame", {
+			Position = UDim2.fromScale(0.07, 0.12),
+			Size = UDim2.fromScale(0.25, 0.76),
+			BackgroundColor3 = Color3.fromRGB(18, 18, 24),
+		}, gui)
+		make("UICorner", { CornerRadius = UDim.new(0.14, 0) }, phone)
+		make("UIStroke", { Color = accent:Lerp(white, 0.3), Thickness = 3 }, phone)
+		drawIcon(phone, g.icon, 60, accent)
+		local lines = g.lines
+		local head = label(gui, lines[1] or "", SIGN_FONT, accent:Lerp(white, 0.35), 0.38, 0.16, 0.58, 0.34, Enum.TextXAlignment.Left)
+		make("UIStroke", { Color = accent, Thickness = 2, Transparency = 0.5 }, head)
+		label(gui, lines[2] or "", TEXT_FONT, white, 0.38, 0.56, 0.58, 0.13, Enum.TextXAlignment.Left)
+		if lines[3] then
+			local badge = make("Frame", { Position = UDim2.fromScale(0.38, 0.75), Size = UDim2.fromScale(0.24, 0.13), BackgroundColor3 = accent }, gui)
+			make("UICorner", { CornerRadius = UDim.new(0.5, 0) }, badge)
+			label(badge, lines[3], Enum.Font.GothamBold, Color3.fromRGB(10, 10, 14), 0.1, 0.15, 0.8, 0.7)
+		end
+	elseif g.kind == "board" then
+		local gui = surface(part, face, 250, 1)
+		local slate = make("Frame", {
+			Position = UDim2.fromScale(0.08, 0.06),
+			Size = UDim2.fromScale(0.84, 0.88),
+			BackgroundColor3 = Color3.fromRGB(32, 40, 37),
+		}, gui)
+		make("UICorner", { CornerRadius = UDim.new(0.04, 0) }, slate)
+		local chalk = Color3.fromRGB(236, 236, 228)
+		for i, line in g.lines do
+			local first = i == 1
+			label(slate, line, Enum.Font.PermanentMarker, if first then accent:Lerp(white, 0.4) else chalk, 0.06, if first then 0.06 else 0.2 + i * 0.13, 0.88, if first then 0.24 else 0.12)
+		end
 	end
 end
 
@@ -321,6 +388,22 @@ local function makePart(p: Prim): BasePart
 	if p.light then
 		addLight(part, p.light)
 	end
+	if p.tag then
+		CollectionService:AddTag(part, p.tag)
+	end
+	if p.sparkles then
+		make("ParticleEmitter", {
+			Color = ColorSequence.new(rgb(p.sparkles)),
+			LightEmission = 1,
+			Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.22), NumberSequenceKeypoint.new(1, 0) }),
+			Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) }),
+			Lifetime = NumberRange.new(1, 1.8),
+			Rate = 6,
+			Speed = NumberRange.new(0.3, 0.8),
+			SpreadAngle = Vector2.new(180, 180),
+			RotSpeed = NumberRange.new(-90, 90),
+		}, part)
+	end
 	local g = p.gui
 	if g then
 		drawGui(part, g, (Enum.NormalId :: any)[g.face] or Enum.NormalId.Front)
@@ -374,6 +457,7 @@ local function buildStall(s: Stall, options: BuildOptions?): Model
 		elseif m.fx == "breathe" then
 			g:SetAttribute("Low", m.low)
 			g:SetAttribute("High", m.high)
+			g:SetAttribute("Radius", m.radius)
 			CollectionService:AddTag(g, "StallBreathe")
 		end
 		g.Parent = model
@@ -754,6 +838,187 @@ local function rebuildOurs(current: Model, stall: Stall): Model
 end
 
 --------------------------------------------------------------------------
+-- Shopkeepers
+--------------------------------------------------------------------------
+
+-- "me" means whoever is logged in to Studio (or the game's owner).
+local function resolveUser(who: any): number?
+	if type(who) == "number" and who > 0 then
+		return who
+	end
+	if type(who) == "string" and tonumber(who) then
+		return tonumber(who)
+	end
+	if who == nil or who == true or who == "me" then
+		local ok, id = pcall(function()
+			return (game:GetService("StudioService") :: any):GetUserId()
+		end)
+		if ok and type(id) == "number" and id > 0 then
+			return id
+		end
+		if game.CreatorType == Enum.CreatorType.User and game.CreatorId > 0 then
+			return game.CreatorId
+		end
+	end
+	return nil
+end
+
+local looks: { [string]: Model } = {}
+
+local function avatarLook(userId: number, rig: Enum.HumanoidRigType): (Model?, string?)
+	local key = `{userId}:{rig.Name}`
+	local cached = looks[key]
+	if cached then
+		return cached, nil
+	end
+	local ok, result = pcall(function()
+		local description = Players:GetHumanoidDescriptionFromUserId(userId)
+		return Players:CreateHumanoidModelFromDescription(description, rig)
+	end)
+	if not ok then
+		return nil, tostring(result)
+	end
+	looks[key] = result
+	return result, nil
+end
+
+local function bodyPart(model: Model, name: string): BasePart?
+	local p = model:FindFirstChild(name)
+	if p and p:IsA("BasePart") then
+		return p
+	end
+	return nil
+end
+
+-- The body part an accessory hangs off.
+local function wornOn(handle: BasePart): BasePart?
+	for _, j in handle:GetChildren() do
+		if j:IsA("JointInstance") or j:IsA("WeldConstraint") then
+			local joint = j :: any
+			local other = if joint.Part0 == handle then joint.Part1 else joint.Part0
+			if other and other:IsA("BasePart") then
+				return other
+			end
+		end
+	end
+	return nil
+end
+
+-- Puts the avatar's clothes, hair and hats, face and skin colour on the
+-- shopkeeper. Its body, position and any scripts stay as they are.
+local function dress(npc: Model, look: Model)
+	for _, c in npc:GetChildren() do
+		if c:IsA("Accessory") or c:IsA("Clothing") or c:IsA("ShirtGraphic") or c:IsA("BodyColors") or c:IsA("CharacterMesh") then
+			c:Destroy()
+		end
+	end
+	for _, c in look:GetChildren() do
+		if c:IsA("Clothing") or c:IsA("ShirtGraphic") or c:IsA("BodyColors") then
+			local copy: Instance = c:Clone()
+			copy.Parent = npc
+		elseif c:IsA("BasePart") and c.Name ~= "HumanoidRootPart" then
+			local mine = bodyPart(npc, c.Name)
+			if mine then
+				mine.Color = c.Color
+			end
+		end
+	end
+
+	local head, lookHead = bodyPart(npc, "Head"), bodyPart(look, "Head")
+	if head and lookHead then
+		local face = lookHead:FindFirstChild("face")
+		if face and face:IsA("Decal") then
+			for _, old in head:GetChildren() do
+				if old:IsA("Decal") and old.Name == "face" then
+					old:Destroy()
+				end
+			end
+			face:Clone().Parent = head
+		end
+	end
+
+	for _, accessory in look:GetChildren() do
+		local handle = if accessory:IsA("Accessory") then accessory:FindFirstChild("Handle") else nil
+		if handle and handle:IsA("BasePart") then
+			local theirs = wornOn(handle) or lookHead
+			local mine = if theirs then bodyPart(npc, theirs.Name) or head else head
+			if theirs and mine then
+				local copy = accessory:Clone()
+				local h = copy:FindFirstChild("Handle") :: BasePart
+				for _, j in h:GetChildren() do
+					if j:IsA("JointInstance") or j:IsA("WeldConstraint") then
+						j:Destroy()
+					end
+				end
+				h.CFrame = mine.CFrame * theirs.CFrame:ToObjectSpace(handle.CFrame)
+				h.Anchored = false
+				h.CanCollide = false
+				h.CanTouch = false
+				h.CanQuery = false
+				h.Massless = true
+				make("WeldConstraint", { Name = "AccessoryWeld", Part0 = mine, Part1 = h }, h)
+				copy.Parent = npc
+			end
+		end
+	end
+end
+
+-- Shopkeepers standing inside one of our stalls.
+local function shopkeepersIn(stall: Model): { Instance }
+	local fit = fitOf(stall)
+	local hw, hd = (fit.width or 14) / 2 + 0.5, (fit.depth or 9) / 2 + 0.5
+	local pivot = stall:GetPivot()
+	local found: { Instance } = {}
+	for _, h in workspace:GetDescendants() do
+		local npc = h.Parent
+		if h:IsA("Humanoid") and npc and npc:IsA("Model") and not npc:IsDescendantOf(stall) then
+			local root = npcRoot(npc)
+			if root then
+				local p = pivot:PointToObjectSpace(root.Position)
+				if math.abs(p.X) < hw and math.abs(p.Z) < hd and p.Y > -2 and p.Y < 12 then
+					table.insert(found, npc)
+				end
+			end
+		end
+	end
+	return found
+end
+
+local warnedNoUser = false
+
+-- Tags the shopkeepers for StallFX and dresses them. Returns how many were dressed.
+local function prepareShopkeepers(npcs: { Instance }, s: Stall): number
+	local dressed = 0
+	for _, npc in npcs do
+		if not npc:IsA("Model") then
+			continue
+		end
+		npc:SetAttribute("ShopkeeperMoves", s.ShopkeeperMoves ~= false)
+		CollectionService:AddTag(npc, "StallShopkeeper")
+		if s.Shopkeeper == false then
+			continue
+		end
+		local userId = resolveUser(s.Shopkeeper)
+		local humanoid = npc:FindFirstChildOfClass("Humanoid")
+		if not userId then
+			if not warnedNoUser then
+				warnedNoUser = true
+				warn("[PhoneStalls] I couldn't tell whose avatar to use. In StallConfig, set Shopkeeper to your UserId (the number in your Roblox profile link).")
+			end
+		elseif humanoid then
+			local look, problem = avatarLook(userId, humanoid.RigType)
+			if look then
+				dress(npc, look)
+				dressed += 1
+			else
+				warn(`[PhoneStalls] Couldn't load the avatar for user {userId}: {problem}`)
+			end
+		end
+	end
+	return dressed
+end
+
+--------------------------------------------------------------------------
 -- Public
 --------------------------------------------------------------------------
 
@@ -786,7 +1051,9 @@ function PhoneStalls.ReplaceSelected(name: string?, width: number?): Model?
 			return nil
 		end
 		waypoint("Before PhoneStalls")
+		table.clear(looks)
 		local model = rebuildOurs(old, s)
+		prepareShopkeepers(shopkeepersIn(model), s)
 		waypoint("PhoneStalls")
 		Selection:Set({ model })
 		return model
@@ -814,11 +1081,14 @@ function PhoneStalls.ReplaceSelected(name: string?, width: number?): Model?
 	local model = buildStall(s, { cframe = a.cframe, fit = a.fit, parent = old.Parent })
 	make("ObjectValue", { Name = "OldStall", Value = old }, model)
 	hideOld(old, a.npcs)
+	table.clear(looks)
+	local dressed = prepareShopkeepers(a.npcs, s)
 	waypoint("PhoneStalls")
 	Selection:Set({ model })
 
 	local note = if a.padFound then "The floor circle is on top of your old one." else "I couldn't find your old floor circle, so the new one is in front of the counter."
-	print(`[PhoneStalls] Built "{model.Name}". The old stall is hidden but still works. {note}`)
+	local keeper = if dressed > 0 then " The shopkeeper is wearing your avatar." elseif #a.npcs == 0 then " I didn't find a shopkeeper in this stall." else ""
+	print(`[PhoneStalls] Built "{model.Name}". The old stall is hidden but still works. {note}{keeper}`)
 	return model
 end
 
@@ -859,12 +1129,15 @@ function PhoneStalls.Rebuild(): { Model }
 		end
 	end
 	waypoint("Before PhoneStalls rebuild")
+	table.clear(looks)
 	local models = {}
 	for _, current in found do
 		local name = current:GetAttribute("PhoneStall") :: string
 		local s = findStall(stalls, name)
 		if s then
-			table.insert(models, rebuildOurs(current, s))
+			local model = rebuildOurs(current, s)
+			prepareShopkeepers(shopkeepersIn(model), s)
+			table.insert(models, model)
 		else
 			warn(`[PhoneStalls] Skipped "{name}": it is not in StallConfig any more.`)
 		end
@@ -872,6 +1145,26 @@ function PhoneStalls.Rebuild(): { Model }
 	waypoint("PhoneStalls rebuild")
 	print(`[PhoneStalls] Rebuilt {#models} stall(s).`)
 	return models
+end
+
+-- Dresses the shopkeepers in every stall. `who` is "me" (default) or a UserId.
+function PhoneStalls.DressShopkeepers(who: any?): number
+	local stalls = loadConfig()
+	table.clear(looks)
+	warnedNoUser = false
+	local count = 0
+	waypoint("Before PhoneStalls dress")
+	for _, d in workspace:GetDescendants() do
+		local name = d:GetAttribute("PhoneStall")
+		if d:IsA("Model") and type(name) == "string" then
+			local s: Stall = table.clone(findStall(stalls, name) or {})
+			s.Shopkeeper = if who ~= nil then who elseif s.Shopkeeper == false then "me" else s.Shopkeeper
+			count += prepareShopkeepers(shopkeepersIn(d), s)
+		end
+	end
+	waypoint("PhoneStalls dress")
+	print(`[PhoneStalls] Dressed {count} shopkeeper(s).`)
+	return count
 end
 
 return PhoneStalls
