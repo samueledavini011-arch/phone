@@ -53,7 +53,7 @@ export type BuildOptions = {
 
 local PhoneStalls = {}
 
-local VERSION = 2 -- bump when StallFX changes, so old copies get replaced
+local VERSION = 3 -- bump when StallFX changes, so old copies get replaced
 local SAVED = "PhoneStallsSaved_" -- prefix for the old stall's saved looks
 local SIGN_FONT = Enum.Font.FredokaOne
 local TEXT_FONT = Enum.Font.GothamMedium

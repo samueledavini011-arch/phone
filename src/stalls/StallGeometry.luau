@@ -84,6 +84,9 @@ export type Stall = { -- one entry in StallConfig
 	StringLights: boolean?, -- warm bulbs hanging from the roof edge
 	Shopkeeper: any?, -- "me", a UserId, or false (PhoneStalls dresses the shopkeeper)
 	ShopkeeperMoves: boolean?, -- shopkeeper idles and waves (StallFX)
+	Bunting: boolean?, -- little flags strung from the sign down to the roof corners
+	Props: boolean?, -- cabinet behind the counter, crates and a sack beside the stall
+	Cat: any?, -- a cat asleep on the crates: "ginger", "black", "white", or false
 }
 
 export type Fit = {
@@ -484,6 +487,30 @@ function StallGeometry.Shapes(s: Stall, fit: Fit?): Result
 		end
 	end
 
+	-- Low cabinet behind the shopkeeper, with odds and ends on top
+	if s.Props ~= false then
+		local cabW, cabH, cabZ = W - 2, 2.3, back - 1.15
+		box(ctx, "Cabinet", { cabW, cabH, 0.9 }, { 0, FL + cabH / 2, cabZ }, { color = DARK_WOOD, material = "Wood", solid = false })
+		plank("CabinetTop", { cabW + 0.2, 0.12, 1.05 }, { 0, FL + cabH + 0.06, cabZ - 0.05 }, 0.3, HONEY[2], false)
+		local doors = math.max(3, math.floor(cabW / 1.6))
+		local dw = cabW / doors
+		for i = 1, doors do
+			local dx = -cabW / 2 + (i - 0.5) * dw
+			plank("CabinetDoor", { dw - 0.1, cabH - 0.25, 0.06 }, { dx, FL + cabH / 2 - 0.03, cabZ - 0.48 }, 0.6, nil, false)
+			ball(ctx, "Knob", 0.06, { dx + (if i % 2 == 0 then -1 else 1) * (dw / 2 - 0.22), FL + cabH * 0.62, cabZ - 0.53 }, deco({ 196, 160, 90 }, "Metal"))
+		end
+		local topY = FL + cabH + 0.12
+		post(ctx, "Mug", 0.17, 0.32, { -cabW / 2 + 0.9, topY + 0.16, cabZ }, deco({ 236, 230, 218 }))
+		add(ctx, "box", "Radio", { 0.9, 0.5, 0.35 }, { cabW / 2 - 1.2, topY + 0.25, cabZ }, rotY(jit(10)), deco(mix(accent, BLACK, 0.45)))
+		disc(ctx, "RadioSpeaker", 0.15, 0.02, { cabW / 2 - 1.4, topY + 0.25, cabZ - 0.19 }, deco({ 28, 28, 30 }))
+		post(ctx, "SmallPot", 0.18, 0.28, { -cabW / 2 + 1.6, topY + 0.14, cabZ }, { color = { 178, 98, 64 }, material = "Sandstone", solid = false })
+		ball(ctx, "Succulent", 0.2, { -cabW / 2 + 1.6, topY + 0.38, cabZ }, deco({ 92, 140, 96 }, "LeafyGrass"))
+		for k = 0, 2 do
+			local c = BOX_COLORS[(k * 2) % #BOX_COLORS + 1]
+			add(ctx, "box", "BoxStack", { 0.8, 0.22, 1.2 }, { cabW / 2 - 2.6 + jit(0.06), topY + 0.11 + k * 0.22, cabZ }, rotY(jit(12)), deco(c))
+		end
+	end
+
 	------------------------------------------------------------------ roof: planks on rafters
 	ctx.group = "Roof"
 	box(ctx, "Roof", { W + 1.2, 0.5, D + 1.6 }, { 0, RH + 0.25, -0.5 }, { color = { 70, 52, 38 }, material = "WoodPlanks" })
@@ -548,6 +575,7 @@ function StallGeometry.Shapes(s: Stall, fit: Fit?): Result
 			solid = false,
 			shadow = false,
 			light = { kind = "point", color = { 255, 214, 160 }, brightness = 0.7, range = 9, angle = 0, face = "Bottom" },
+			sparkles = { 255, 214, 120 }, -- a few fireflies round the lantern
 		})
 		post(ctx, "LanternCap", 0.22, 0.08, { lx, RH - 1.59, lz }, deco({ 40, 30, 24 }))
 		post(ctx, "Tassel", 0.04, 0.42, { lx, RH - 1.84, lz }, neon(accent))
@@ -586,6 +614,32 @@ function StallGeometry.Shapes(s: Stall, fit: Fit?): Result
 		add(ctx, "cyl", "SignRim", { 0.3, SH + 0.36, SH + 0.36 }, onSign({ sx * (SL - SH) / 2, 0, 0.3 }), mul(tilt, rotY(90)), neon(accent))
 	end
 	motion("Sign", "flicker", { 0, signY, signZ }, 0, 0, 0, 0)
+
+	-- The neon's transformer box on the beam, with its cable down to the sign
+	ctx.group = "Roof"
+	local boxX = SL / 2 - 0.9
+	box(ctx, "Transformer", { 0.55, 0.38, 0.3 }, { boxX, beamY + 0.35, signZ + 0.05 }, { color = { 52, 54, 58 }, material = "Metal", solid = false })
+	rod(ctx, "NeonCable", { boxX, beamY + 0.2, signZ + 0.2 }, onSign({ boxX - 0.2, SH / 2, 0.4 }), 0.03, deco({ 20, 20, 20 }))
+
+	-- Bunting from the beam ends down to the front corners of the roof
+	if s.Bunting ~= false then
+		local flags: { RGB } = { accent, { 244, 232, 204 }, { 246, 196, 80 }, mix(accent, WHITE, 0.55) }
+		for _, sx in { -1, 1 } do
+			local a: Vec = { sx * (SL / 2 + 0.3), beamY, signZ }
+			local b: Vec = { sx * (W / 2 + 0.55), RH + 0.55, front - 1.25 }
+			local n = 6
+			local last = a
+			for i = 1, n do
+				local t = i / n
+				local p: Vec = { a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t - 1.4 * t * (1 - t), a[3] + (b[3] - a[3]) * t }
+				rod(ctx, "Bunting", last, p, 0.02, deco({ 230, 220, 200 }))
+				if i < n then
+					add(ctx, "box", "Flag", { 0.34, 0.34, 0.02 }, { p[1], p[2] - 0.25, p[3] }, mul(rotY(sx * 35), rotZ(45 + jit(8))), deco(flags[(i - 1) % #flags + 1], "Fabric"))
+				end
+				last = p
+			end
+		end
+	end
 
 	-- Little neon OPEN sign hanging a bit crooked on the left
 	if s.OpenSign ~= false then
@@ -723,6 +777,64 @@ function StallGeometry.Shapes(s: Stall, fit: Fit?): Result
 			for k = 1, 3 do
 				ball(ctx, "Flower", 0.1, { px + jit(0.5), 2 + rand() * 0.5, pz - 0.3 + jit(0.2) }, deco(if k == 2 then { 255, 214, 90 } else { 246, 140, 170 }))
 			end
+		end
+	end
+
+	------------------------------------------------------------------ hanging rope planter
+	if s.Plants ~= false then
+		ctx.group = "Plants"
+		local hx, hy, hz = W / 2 - 1.4, RH - 2.5, front + 1.5
+		for k = 0, 2 do
+			local a = math.rad(90 + k * 120)
+			rod(ctx, "Rope", { hx, RH - 0.3, hz }, { hx + math.cos(a) * 0.3, hy + 0.17, hz + math.sin(a) * 0.3 }, 0.02, deco({ 226, 210, 180 }, "Fabric"))
+		end
+		post(ctx, "HangingPot", 0.32, 0.36, { hx, hy, hz }, { color = { 178, 98, 64 }, material = "Sandstone", solid = false })
+		ball(ctx, "Leaves", 0.36, { hx, hy + 0.3, hz }, deco({ 66, 112, 60 }, "LeafyGrass"))
+		for _, t in { { 0.26, -0.28, 0.16 }, { 0.32, -0.62, 0.13 }, { -0.22, -0.4, 0.14 }, { -0.1, -0.75, 0.11 } } do
+			ball(ctx, "Trailing", t[3], { hx + t[1], hy + t[2], hz - 0.15 }, deco({ 74, 124, 64 }, "LeafyGrass"))
+		end
+	end
+
+	------------------------------------------------------------------ crates, a sack and a sleeping cat beside the stall
+	if s.Props ~= false then
+		ctx.group = "Props"
+		local px, pz = W / 2 + 1.25, back - 1.5
+		local function crateBox(cx: number, cy: number, cz: number, w: number, h: number, d: number, turn: number)
+			local r = mul(rotY(turn), wobble(0.6))
+			add(ctx, "box", "Crate", { w, h, d }, { cx, cy + h / 2, cz }, r, { color = wood(), material = "WoodPlanks" })
+			for _, side in { -1, 1 } do
+				for _, k in { 0.3, 0.7 } do
+					local o = apply(r, { 0, -h / 2 + h * k, side * (d / 2 + 0.03) })
+					add(ctx, "box", "CrateSlat", { w + 0.04, h * 0.18, 0.06 }, { cx + o[1], cy + h / 2 + o[2], cz + o[3] }, r, { color = DARK_WOOD, material = "Wood" })
+				end
+			end
+		end
+		crateBox(px, 0, pz, 1.5, 1.1, 1.2, jit(6))
+		crateBox(px + jit(0.1), 1.1, pz + 0.05, 1.15, 0.85, 0.95, 12 + jit(6))
+		ball(ctx, "Sack", 0.55, { px - 0.1, 0.5, pz - 1.05 }, { color = { 196, 168, 120 }, material = "Fabric" })
+		ball(ctx, "SackTop", 0.3, { px - 0.1, 1.02, pz - 1.0 }, { color = { 186, 158, 112 }, material = "Fabric", solid = false })
+
+		local cat = s.Cat
+		if cat == nil then
+			cat = if kind == "sell" then "black" else "ginger"
+		end
+		if cat then
+			ctx.group = "Cat"
+			local fur: RGB = if cat == "black" then { 34, 32, 34 } elseif cat == "white" then { 236, 232, 226 } else { 212, 128, 58 }
+			local furProps: Props = { color = fur, material = "Fabric", solid = false }
+			local cy = 1.1 + 0.85
+			ball(ctx, "CatBody", 0.36, { px, cy + 0.26, pz }, furProps)
+			ball(ctx, "CatHead", 0.22, { px - 0.12, cy + 0.22, pz - 0.32 }, furProps)
+			for _, ex in { -0.22, -0.02 } do
+				add(ctx, "box", "CatEar", { 0.12, 0.12, 0.04 }, { px + ex, cy + 0.4, pz - 0.33 }, rotZ(45), furProps)
+			end
+			local eye: RGB = if cat == "black" then { 120, 110, 90 } else { 40, 30, 26 }
+			for _, ex in { -0.2, -0.04 } do
+				box(ctx, "CatEye", { 0.08, 0.015, 0.02 }, { px + ex, cy + 0.24, pz - 0.53 }, deco(eye))
+			end
+			rod(ctx, "CatTail", { px + 0.28, cy + 0.06, pz + 0.05 }, { px + 0.22, cy + 0.04, pz - 0.3 }, 0.06, furProps)
+			rod(ctx, "CatTail", { px + 0.22, cy + 0.04, pz - 0.3 }, { px + 0.02, cy + 0.04, pz - 0.48 }, 0.055, furProps)
+			motion("Cat", "spin", { px, cy, pz }, 0, 0.02, 0, 0) -- no turning, just breathing
 		end
 	end
 

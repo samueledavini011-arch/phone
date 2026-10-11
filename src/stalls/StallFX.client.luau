@@ -4,6 +4,7 @@
 
 	Animates the stalls on each player's screen:
 	  * the icons above the floor circles spin and float up and down
+	  * the cats on the crates breathe in their sleep
 	  * the display phone on the BUY counter turns on its turntable
 	  * the glow round the floor circles fades in and out, and lights up
 	    while you stand on the circle
@@ -189,7 +190,8 @@ RunService.RenderStepped:Connect(function(dt: number)
 	for m, s in spinners do
 		if m.Parent then
 			local lift = s.bob * math.sin(t * 1.6 + s.phase)
-			m:PivotTo(s.base * CFrame.new(0, lift, 0) * CFrame.Angles(0, t * s.speed + s.phase, 0))
+			local turn = if s.speed ~= 0 then t * s.speed + s.phase else 0
+			m:PivotTo(s.base * CFrame.new(0, lift, 0) * CFrame.Angles(0, turn, 0))
 		end
 	end
 	for m, b in breathers do

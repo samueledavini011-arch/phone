@@ -223,26 +223,32 @@ degree off true and has its own shade of wood.
   roof of boards on rafters.
 - A counter of vertical boards held by battens and a cross brace, with a
   butcher-block top and a lit icon panel in a wooden frame.
-- A big neon sign hung slightly crooked on chains from a timber beam, a
-  scrolling LED ticker, warm string lights, a little OPEN sign, and neon
-  lines on the posts, roof and base.
+- A big neon sign hung slightly crooked on chains from a timber beam, with
+  its transformer box and cable, bunting flags strung from the beam down
+  to the roof corners, a scrolling LED ticker, warm string lights, a little
+  OPEN sign, and neon lines on the posts, roof and base.
 - Hand-lettered signs: a chalk menu above the shopkeeper, painted signs on
   both sides, a chalkboard A-frame out front and a cardboard sign on the
   counter.
 - Bulbs hanging on cords under little shades, and paper lanterns at the
-  front corners.
+  front corners with a few fireflies drifting round them.
 - Rough shelves on brackets with phone boxes and price tags (and stacks of
   cash on the SELL stall), and a wooden crate of phones on the counter.
 - On the counter, BUY gets a phone on a wooden turntable, phones on stands,
   a paper bag, a card reader and a service bell. SELL gets a cash register,
   cash and a phone being checked on a glowing tray.
-- A woven rug, terracotta pots with flowers, and a glowing floor circle
+- A low cabinet behind the shopkeeper with a mug, a radio, a little plant
+  and a stack of boxes on top.
+- Crates and a sack beside each stall, with a cat asleep on top that
+  breathes in its sleep (ginger at BUY, black at SELL).
+- A woven rug, terracotta pots with flowers, a rope planter hanging inside,
+  and a glowing floor circle
   that pulses (and lights up while you stand on it), with a spinning icon
   and sparkles above it.
 - Real lights from the hanging bulbs, lanterns, sign and under the deck.
 - The shopkeepers stand idle and wave when someone walks up.
 
-Each stall is about 300 parts.
+Each stall is about 370 parts.
 
 Your shopkeepers and your buy/sell scripts are not touched. The old stall's
 parts are made invisible but keep working: players can still step on, touch
@@ -292,7 +298,7 @@ To put an old stall back, select it (or its new look) and run
 Open **PhoneStalls > StallConfig**. Each stall has its sign text, its neon
 colour, the icon (`bag`, `cash`, `phone`, `none` or an image ID), the menu
 board, ticker, painted sign, chalkboard and cardboard sign words, whether
-to show the OPEN sign,
+to show the OPEN sign, bunting, the cabinet and crates, the cat's colour,
 plants and string lights, and whether the shopkeeper wears an avatar
 (`false` keeps their own look, `"me"` uses yours, or a UserId). After a
 change, or after putting in a newer `PhoneStalls.rbxmx`, run

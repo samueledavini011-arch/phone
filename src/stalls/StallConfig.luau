@@ -27,6 +27,10 @@ return {
 		-- your Roblox avatar, or a UserId (the number in a profile link).
 		Shopkeeper = false,
 		ShopkeeperMoves = true, -- idles and waves when someone walks up
+
+		Bunting = true, -- little flags strung from the sign to the roof corners
+		Props = true, -- cabinet behind the counter, crates and a sack beside the stall
+		Cat = "ginger", -- a cat asleep on the crates: "ginger", "black", "white", or false
 	},
 	{
 		Name = "Sell Stall",
@@ -44,5 +48,8 @@ return {
 		Card = { "CASH $$", "fair prices!" },
 		Shopkeeper = false,
 		ShopkeeperMoves = true,
+		Bunting = true,
+		Props = true,
+		Cat = "black",
 	},
 }
