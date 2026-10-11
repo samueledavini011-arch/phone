@@ -211,3 +211,66 @@ To build fresh towers without replacing anything, use
 
 To rebuild the file after editing the scripts, run
 `rojo build towers.project.json -o PhoneTowers.rbxmx`.
+
+# BUY and SELL stalls
+
+`PhoneStalls.rbxmx` gives the BUY and SELL stalls a new look:
+
+- A counter with a fluted metal front, a marble top, an underlit edge and
+  a glowing icon panel.
+- A warm wooden back wall with lit shelves of phone boxes (and stacks of
+  cash on the SELL stall), and a menu board above the shopkeeper's head.
+- Things on the counter. BUY gets a display phone turning on a turntable,
+  phones on stands, a shopping bag, a card reader and a service bell. SELL
+  gets a cash register, bundles of cash and a phone being checked on a
+  glowing tray.
+- A big neon sign on the roof that flickers now and then, a little OPEN
+  sign, neon lines on the pillars, roof and base, and glass side panels.
+- A glowing floor circle with a breathing glow and a spinning icon floating
+  above it, plus potted plants by the corners.
+- Real lights: downlights over the counter, a light in the stall, coloured
+  light from the sign and from under the base.
+
+Each stall is about 160 parts.
+
+Your shopkeepers and your buy/sell scripts are not touched. The old stall's
+parts are made invisible but keep working: players can still step on, touch
+or use its floor circle and prompts. The new floor circle goes on top of the
+old one, and the new floor goes right under the shopkeeper's feet.
+
+## Install
+
+1. In Roblox Studio, right-click **ServerStorage** in the Explorer, pick
+   **Insert from File...** and choose `PhoneStalls.rbxmx`.
+2. Click your old BUY stall in the 3D view so it is selected.
+3. Open **View > Command Bar**, paste this line and press Enter:
+
+   ```lua
+   require(game.ServerStorage.PhoneStalls).ReplaceSelected()
+   ```
+
+4. Do the same for the SELL stall.
+
+It works out which stall is which from the old sign, and which way the
+stall faces from the way the shopkeeper looks. If it can't tell, give it
+the name: `ReplaceSelected("Sell Stall")`. To set the width yourself, add
+it in studs: `ReplaceSelected("Sell Stall", 16)`.
+
+The first time, it also adds a LocalScript called **StallFX** to
+StarterPlayerScripts. It spins the floating icons and the turntable, makes
+the floor glow breathe and makes the neon signs flicker. These only move
+while the game is running.
+
+To put an old stall back, select it (or its new look) and run
+`require(game.ServerStorage.PhoneStalls).Restore()`.
+
+## Change it
+
+Open **PhoneStalls > StallConfig**. Each stall has its sign text, its neon
+colour, the icon (`bag`, `cash`, `phone`, `none` or an image ID), the menu
+board lines, and whether to show the OPEN sign and the plants. After a
+change, or after putting in a newer `PhoneStalls.rbxmx`, run
+`require(game.ServerStorage.PhoneStalls).Rebuild()`.
+
+To rebuild the file after editing the scripts, run
+`rojo build stalls.project.json -o PhoneStalls.rbxmx`.

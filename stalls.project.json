@@ -1,0 +1,15 @@
+{
+  "name": "PhoneStalls",
+  "tree": {
+    "$path": "src/stalls/PhoneStalls.luau",
+    "StallConfig": {
+      "$path": "src/stalls/StallConfig.luau"
+    },
+    "StallGeometry": {
+      "$path": "src/stalls/StallGeometry.luau"
+    },
+    "StallFX": {
+      "$path": "src/stalls/StallFX.client.luau"
+    }
+  }
+}
